@@ -1,0 +1,57 @@
+{
+	"name": "stindicators",
+	"version": "0.0.1",
+	"main": "dist/index.js",
+	"types": "src/typings.d.ts",
+	"license": "MIT",
+	"repository": "github:ilyashegay/stindicators",
+	"scripts": {
+		"build": "esbuild src/index.ts --bundle --platform=node --external:decimal.js --target=node14 --outdir=dist",
+		"tsc": "tsc --noEmit --skipLibCheck --project tsconfig.json",
+		"lint": "eslint --ext js,ts src test",
+		"test": "uvu -r esbuild-register"
+	},
+	"dependencies": {
+		"decimal.js": "^10.3.1"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^4.31.2",
+		"@typescript-eslint/parser": "^4.31.2",
+		"esbuild": "^0.13.2",
+		"esbuild-register": "^3.0.0",
+		"eslint": "^7.32.0",
+		"typescript": "^4.4.3",
+		"uvu": "^0.5.1"
+	},
+	"prettier": {
+		"semi": false,
+		"useTabs": true,
+		"singleQuote": true,
+		"trailingComma": "all"
+	},
+	"eslintConfig": {
+		"parser": "@typescript-eslint/parser",
+		"parserOptions": {
+			"sourceType": "module",
+			"project": "./tsconfig.json"
+		},
+		"env": {
+			"es2020": true
+		},
+		"plugins": [
+			"@typescript-eslint"
+		],
+		"extends": [
+			"eslint:recommended",
+			"plugin:@typescript-eslint/recommended",
+			"plugin:@typescript-eslint/recommended-requiring-type-checking"
+		],
+		"rules": {
+			"no-mixed-spaces-and-tabs": [
+				"warn",
+				"smart-tabs"
+			],
+			"@typescript-eslint/explicit-module-boundary-types": "off"
+		}
+	}
+}
