@@ -1,12 +1,15 @@
 {
 	"name": "stindicators",
 	"version": "0.0.1",
-	"main": "dist/index.js",
+	"main": "dist/index.cjs.js",
+	"module": "dist/index.esm.js",
 	"types": "src/typings.d.ts",
 	"license": "MIT",
 	"repository": "github:ilyashegay/stindicators",
 	"scripts": {
-		"build": "esbuild src/index.ts --bundle --platform=node --external:decimal.js --target=node14 --outdir=dist",
+		"build": "npm run build:cjs && npm run build:esm",
+		"build:cjs": "esbuild src/index.ts --bundle --format=cjs --external:decimal.js --target=node14 --outfile=dist/index.cjs.js",
+		"build:esm": "esbuild src/index.ts --bundle --format=esm --external:decimal.js --target=node14 --outfile=dist/index.esm.js",
 		"tsc": "tsc --noEmit --skipLibCheck --project tsconfig.json",
 		"lint": "eslint --ext js,ts src test",
 		"test": "uvu -r esbuild-register"

@@ -1,54 +1,5 @@
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
-var __export = (target, all) => {
-  __markAsModule(target);
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __reExport = (target, module2, desc) => {
-  if (module2 && typeof module2 === "object" || typeof module2 === "function") {
-    for (let key of __getOwnPropNames(module2))
-      if (!__hasOwnProp.call(target, key) && key !== "default")
-        __defProp(target, key, { get: () => module2[key], enumerable: !(desc = __getOwnPropDesc(module2, key)) || desc.enumerable });
-  }
-  return target;
-};
-var __toModule = (module2) => {
-  return __reExport(__markAsModule(__defProp(module2 != null ? __create(__getProtoOf(module2)) : {}, "default", module2 && module2.__esModule && "default" in module2 ? { get: () => module2.default, enumerable: true } : { value: module2, enumerable: true })), module2);
-};
-
-// src/index.ts
-__export(exports, {
-  IndicatorType: () => IndicatorType,
-  Stream: () => Stream,
-  decay: () => decay,
-  descriptorMap: () => descriptorMap,
-  descriptors: () => descriptors_default,
-  edecay: () => edecay,
-  fastFork: () => fastFork,
-  fastListFork: () => fastListFork,
-  fork: () => fork,
-  initIndicators: () => initIndicators,
-  lag: () => lag,
-  listFork: () => listFork,
-  makeDescriptor: () => makeDescriptor,
-  makeStatefulMap: () => makeStatefulMap,
-  map: () => map,
-  mapFork: () => mapFork,
-  max: () => max,
-  min: () => min,
-  pipe: () => pipe,
-  scan: () => scan,
-  skip: () => skip
-});
-
 // src/utils.ts
-var import_decimal = __toModule(require("decimal.js"));
+import Decimal from "decimal.js";
 
 // src/flow.operators.ts
 var Router = class {
@@ -303,9 +254,9 @@ function pipe(...ops) {
 }
 
 // src/utils.ts
-var ZERO = new import_decimal.default(0);
-var ONE = new import_decimal.default(1);
-var HUNDRED = new import_decimal.default(100);
+var ZERO = new Decimal(0);
+var ONE = new Decimal(1);
+var HUNDRED = new Decimal(100);
 var Stream = class {
   constructor(fn, lb = 0) {
     this.fn = fn;
@@ -493,8 +444,8 @@ var sum = (period) => pipe(forkWithLag(period, ZERO), scan((sum2, [head, tail]) 
 var weighted_sum = (period) => pipe(fork(map((value, index2) => value.times(Math.min(period, index2 + 1))), pipe(forkWithLag(period, ZERO), scan((sum2, [head, tail]) => sum2.plus(head).minus(tail), ZERO), lag(1, ZERO), map((sum2, index2) => index2 < period ? ZERO : sum2))), scan((wsum, [wvalue, sum2]) => wsum.plus(wvalue).minus(sum2), ZERO), skip(period - 1));
 var crossany = mapWithLast(([a, b], [last_a, last_b]) => a.gt(b) && last_a.lte(last_b) || a.lt(b) && last_a.gte(last_b) ? 1 : 0);
 var crossover = mapWithLast(([a, b], [last_a, last_b]) => a.gt(b) && last_a.lte(last_b) ? 1 : 0);
-var decay = (period) => scan((decay2, value) => import_decimal.default.max(value, decay2.minus(1 / period), ZERO), ZERO);
-var edecay = (period) => scan((decay2, value) => import_decimal.default.max(value, decay2.times(period - 1).div(period), ZERO), ZERO);
+var decay = (period) => scan((decay2, value) => Decimal.max(value, decay2.minus(1 / period), ZERO), ZERO);
+var edecay = (period) => scan((decay2, value) => Decimal.max(value, decay2.times(period - 1).div(period), ZERO), ZERO);
 var match_item = (period, matcher) => {
   return pipe(matchItem(period, matcher), map((match) => match[0]));
 };
@@ -529,8 +480,8 @@ var wma = (period) => pipe(weighted_sum(period), divideBy(period * (period + 1) 
 var hma = (period) => pipe(fork(wma(Math.floor(period / 2)), wma(period)), flatMap((wma1, wma2) => wma1.times(2).minus(wma2)), wma(Math.floor(Math.sqrt(period))));
 var zlema = (factor, lag2) => pipe(forkWithLag(lag2, ZERO), skip(lag2 - 1), map(([head, tail], index2) => index2 === 0 ? head : head.plus(head.minus(tail))), ema(factor));
 var kama = (period) => {
-  const f = new import_decimal.default(2).div(3);
-  const s = new import_decimal.default(2).div(31);
+  const f = new Decimal(2).div(3);
+  const s = new Decimal(2).div(31);
   const fs = f.minus(s);
   return pipe(fork(pipe(div(pipe(forkWithLag(period, ZERO), flatMap((head, tail) => head.minus(tail).abs())), pipe(mapWithLast((head, tail) => head.minus(tail).abs(), ZERO), sum(period))), map((e) => e.times(fs).plus(s).pow(2))), identity()), scan((kama2, [s2, val], index2) => index2 > 0 ? val.minus(kama2).times(s2).plus(kama2) : val, ZERO));
 };
@@ -544,7 +495,7 @@ var md = (period) => pipe(fork(index, sma(period), memAll(period)), flatMap((ind
 }));
 var variance = (smoother) => pipe(fork(pipe(map((n) => n.pow(2)), smoother), pipe(smoother, map((n) => n.pow(2)))), flatMap((p2, p1) => p2.minus(p1)));
 var stddev = (smoother) => pipe(variance(smoother), map((n) => n.sqrt()));
-var volatility = (duration, smoother) => pipe(mapWithLast((input, last) => input.div(last).minus(1)), stddev(smoother), multiplyBy(new import_decimal.default(duration).sqrt()));
+var volatility = (duration, smoother) => pipe(mapWithLast((input, last) => input.div(last).minus(1)), stddev(smoother), multiplyBy(new Decimal(duration).sqrt()));
 var apo = (short, long) => minus(short, long);
 var ppo = (short, long) => oscillators.diff_over_long(short, long);
 var macd = (short, long, signal, longPeriod) => pipe(minus(short, long), skip(longPeriod - 1), fork(identity(), signal), flatMap((macd3, signal2) => [
@@ -586,11 +537,11 @@ var msw = (period) => pipe(memAll(period), skip(period), map((inputs, i) => {
   let ip = ZERO;
   for (let j = 0; j < period; j += 1) {
     const weight = inputs.get(period + i - j);
-    const a = new import_decimal.default(2 * Math.PI * j / period);
+    const a = new Decimal(2 * Math.PI * j / period);
     rp = rp.plus(a.cos().times(weight));
     ip = ip.plus(a.sin().times(weight));
   }
-  let phase = rp.abs().gt(1e-3) ? ip.div(rp).atan() : new import_decimal.default(Math.PI * (ip.lt(0) ? -1 : 1));
+  let phase = rp.abs().gt(1e-3) ? ip.div(rp).atan() : new Decimal(Math.PI * (ip.lt(0) ? -1 : 1));
   if (rp.lt(0)) {
     phase = phase.plus(Math.PI);
   }
@@ -605,7 +556,7 @@ var msw = (period) => pipe(memAll(period), skip(period), map((inputs, i) => {
 }));
 
 // src/indicators.ts
-var MIN_VOLUME = new import_decimal.default(1e-8);
+var MIN_VOLUME = new Decimal(1e-8);
 var openprice = map((candle) => candle.open);
 var highprice = map((candle) => candle.high);
 var lowprice = map((candle) => candle.low);
@@ -656,7 +607,7 @@ var tr = (skipFirst = false) => makeStatefulMap(() => {
   return (candle) => {
     const last = prev;
     prev = candle;
-    return last ? import_decimal.default.max(candle.high.minus(candle.low), candle.high.minus(last.close).abs(), candle.low.minus(last.close).abs()) : skipFirst ? ZERO : candle.high.minus(candle.low);
+    return last ? Decimal.max(candle.high.minus(candle.low), candle.high.minus(last.close).abs(), candle.low.minus(last.close).abs()) : skipFirst ? ZERO : candle.high.minus(candle.low);
   };
 });
 var cci = (period) => pipe(typprice, fork(identity(), sma(period), md(period)), skip(period - 1), flatMap((tp, atp, md2) => tp.minus(atp).div(md2.times(0.015))));
@@ -683,30 +634,30 @@ var kvo = (short, long) => pipe(fork(volume, kvo_trend, range, kvo_cm), flatMap(
 var mass = (period, ema_period, factor) => pipe(range, div(ema(factor), double_ema(ema_period, factor)), sum(period));
 var mfi = (period) => pipe(fork(pipe(typprice, forkWithLag(1)), nzvolume), oscillators.short_over_sum(pipe(flatMap(([tp, last_tp], volume2) => tp.gt(last_tp) ? tp.times(volume2) : ZERO), sum(period)), pipe(flatMap(([tp, last_tp], volume2) => tp.lt(last_tp) ? tp.times(volume2) : ZERO), sum(period))));
 var natr = (smoother) => div(atr(smoother, false), closeprice, HUNDRED);
-var vi = (condition) => pipe(fork(pipe(volume, mapWithLast(condition, false)), pipe(closeprice, mapWithLast((close, last) => close.minus(last).div(last), ZERO))), flatMap((check, close) => check ? close : ZERO), scan((vi2, extra) => vi2.plus(vi2.times(extra)), new import_decimal.default(1e3)));
+var vi = (condition) => pipe(fork(pipe(volume, mapWithLast(condition, false)), pipe(closeprice, mapWithLast((close, last) => close.minus(last).div(last), ZERO))), flatMap((check, close) => check ? close : ZERO), scan((vi2, extra) => vi2.plus(vi2.times(extra)), new Decimal(1e3)));
 var pvi = vi((volume2, last) => volume2.gt(last));
 var nvi = vi((volume2, last) => volume2.lt(last));
 var obv = pipe(fork(pipe(closeprice, mapWithLast((close, last) => close.comparedTo(last), 0)), volume), scan((obv2, [change, volume2]) => obv2.plus(volume2.times(change)), ZERO));
 var qstick = (period) => pipe(map((candle) => candle.close.minus(candle.open)), sma(period));
 var stoch2 = (fast_k_period, k_smoother, d_smoother) => pipe(stoch(closeprice, pipe(highprice, max(fast_k_period)), pipe(lowprice, min(fast_k_period)), HUNDRED), k_smoother, fork(identity(), d_smoother));
 var ultosc = (period1, period2, period3) => pipe(fork(highprice, lowprice, pipe(closeprice, forkWithLag(1))), flatMap((high, low, [close, prevClose]) => {
-  const tl = import_decimal.default.min(low, prevClose);
-  const th = import_decimal.default.max(high, prevClose);
+  const tl = Decimal.min(low, prevClose);
+  const th = Decimal.max(high, prevClose);
   return [close.minus(tl), th.minus(tl)];
 }), fork(pipe(map((bpr) => bpr[0]), fork(sum(period1), sum(period2), sum(period3))), pipe(map((bpr) => bpr[1]), fork(sum(period1), sum(period2), sum(period3)))), flatMap(([bp1, bp2, bp3], [r1, r2, r3]) => bp1.div(r1).times(4).plus(bp2.div(r2).times(2)).plus(bp3.div(r3)).times(HUNDRED).div(7)));
 var vosc = (fast, slow) => pipe(nzvolume, oscillators.diff_over_long(sma(fast), sma(slow)));
 var wad = pipe(fork(highprice, lowprice, pipe(closeprice, forkWithLag(1))), flatMap((high, low, [close, prevClose]) => {
   if (close.gt(prevClose)) {
-    return close.minus(import_decimal.default.min(low, prevClose));
+    return close.minus(Decimal.min(low, prevClose));
   }
   if (close.lt(prevClose)) {
-    return close.minus(import_decimal.default.max(high, prevClose));
+    return close.minus(Decimal.max(high, prevClose));
   }
   return ZERO;
 }), scan((wad2, ad2) => wad2.plus(ad2), ZERO));
 var willr = (period) => stoch(closeprice, pipe(lowprice, min(period)), pipe(highprice, max(period)), -100);
 var vwma = (period) => div(pipe(map((candle) => candle.volume.times(candle.close)), sum(period)), pipe(nzvolume, sum(period)));
-var fisher = (period) => pipe(medprice, stoch(identity(), max(period), min(period)), scan((res, val) => val.minus(0.5).times(0.66).plus(res.times(0.67)), ZERO), map((val) => val.gt(0.99) ? new import_decimal.default(0.999) : val.lt(-0.99) ? new import_decimal.default(-0.999) : val), map((val) => ONE.plus(val).div(ONE.minus(val)).ln()), scan((fisher2, val) => val.times(0.5).plus(fisher2.times(0.5)), ZERO), forkWithLag(1, ZERO));
+var fisher = (period) => pipe(medprice, stoch(identity(), max(period), min(period)), scan((res, val) => val.minus(0.5).times(0.66).plus(res.times(0.67)), ZERO), map((val) => val.gt(0.99) ? new Decimal(0.999) : val.lt(-0.99) ? new Decimal(-0.999) : val), map((val) => ONE.plus(val).div(ONE.minus(val)).ln()), scan((fisher2, val) => val.times(0.5).plus(fisher2.times(0.5)), ZERO), forkWithLag(1, ZERO));
 var psar = (accel_step, accel_max) => pipe(fork(pipe(highprice, memAll(3)), pipe(lowprice, memAll(3)), index), skip(1), makeStatefulMap(() => {
   let lng;
   let sar;
@@ -730,9 +681,9 @@ var psar = (accel_step, accel_max) => pipe(fork(pipe(highprice, memAll(3)), pipe
     sar = extreme.minus(sar).times(accel).plus(sar);
     if (lng) {
       if (index2 >= 2) {
-        sar = import_decimal.default.min(sar, lows.get(index2 - 2));
+        sar = Decimal.min(sar, lows.get(index2 - 2));
       }
-      sar = import_decimal.default.min(sar, lows.get(index2 - 1));
+      sar = Decimal.min(sar, lows.get(index2 - 1));
       if (high > extreme) {
         extreme = high;
         accel = Math.min(accel_max, accel + accel_step);
@@ -745,9 +696,9 @@ var psar = (accel_step, accel_max) => pipe(fork(pipe(highprice, memAll(3)), pipe
       }
     } else {
       if (index2 >= 2) {
-        sar = import_decimal.default.max(sar, highs.get(index2 - 2));
+        sar = Decimal.max(sar, highs.get(index2 - 2));
       }
-      sar = import_decimal.default.max(sar, highs.get(index2 - 1));
+      sar = Decimal.max(sar, highs.get(index2 - 1));
       if (low < extreme) {
         extreme = low;
         accel = Math.min(accel_max, accel + accel_step);
@@ -967,13 +918,12 @@ function initIndicators(mapper) {
 
 // src/index.ts
 var descriptorMap = descriptors_default;
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
+export {
   IndicatorType,
   Stream,
   decay,
   descriptorMap,
-  descriptors,
+  descriptors_default as descriptors,
   edecay,
   fastFork,
   fastListFork,
@@ -990,4 +940,4 @@ var descriptorMap = descriptors_default;
   pipe,
   scan,
   skip
-});
+};
