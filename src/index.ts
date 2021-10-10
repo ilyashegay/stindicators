@@ -1,7 +1,7 @@
 import { DescriptorRecord } from './utils'
 import descriptors from './descriptors'
 
-export { initIndicators } from './preset'
+export { initIndicators, operators } from './preset'
 export { default as descriptors } from './descriptors'
 export {
 	Candle,

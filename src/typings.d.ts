@@ -377,3 +377,55 @@ export declare function initIndicators<T>(mapper: (input: T) => Candle): {
 	wad: () => Stream<T, Decimal>
 	willr: (period: number) => Stream<T, Decimal>
 }
+
+export declare const operators: {
+	apo: (short: number, long: number) => Stream<Decimal, Decimal>
+	bbands: (
+		period: number,
+		scale: number,
+	) => Stream<Decimal, [lower: Decimal, middle: Decimal, upper: Decimal]>
+	cmo: (period: number) => Stream<Decimal, Decimal>
+	decay: (period: number) => Stream<Decimal, Decimal>
+	dema: (period: number) => Stream<Decimal, Decimal>
+	dpo: (period: number) => Stream<Decimal, Decimal>
+	edecay: (period: number) => Stream<Decimal, Decimal>
+	ema: (period: number) => Stream<Decimal, Decimal>
+	fosc: (period: number) => Stream<Decimal, Decimal>
+	hma: (period: number) => Stream<Decimal, Decimal>
+	kama: (period: number) => Stream<Decimal, Decimal>
+	linreg: (period: number) => Stream<Decimal, Decimal>
+	linregintercept: (period: number) => Stream<Decimal, Decimal>
+	linregslope: (period: number) => Stream<Decimal, Decimal>
+	macd: (
+		short: number,
+		long: number,
+		signal: number,
+	) => Stream<Decimal, [macd: Decimal, signal: Decimal, histogram: Decimal]>
+	max: (period: number) => Stream<Decimal, Decimal>
+	min: (period: number) => Stream<Decimal, Decimal>
+	mom: (period: number) => Stream<Decimal, Decimal>
+	msw: (period: number) => Stream<Decimal, Decimal[]>
+	ppo: (short: number, long: number) => Stream<Decimal, Decimal>
+	roc: (period: number) => Stream<Decimal, Decimal>
+	rocr: (period: number) => Stream<Decimal, Decimal>
+	rsi: (period: number) => Stream<Decimal, Decimal>
+	sma: (period: number) => Stream<Decimal, Decimal>
+	stddev: (period: number) => Stream<Decimal, Decimal>
+	stderr: (period: number) => Stream<Decimal, Decimal>
+	stochrsi: (period: number) => Stream<Decimal, Decimal>
+	tema: (period: number) => Stream<Decimal, Decimal>
+	trima: (period: number) => Stream<Decimal, Decimal>
+	trix: (period: number) => Stream<Decimal, Decimal>
+	tsf: (period: number) => Stream<Decimal, Decimal>
+	variance: (period: number) => Stream<Decimal, Decimal>
+	vhf: (period: number) => Stream<Decimal, Decimal>
+	vidya: (
+		short: number,
+		long: number,
+		factor: number,
+	) => Stream<Decimal, Decimal>
+	volatility: (period: number) => Stream<Decimal, Decimal>
+	wilders: (period: number) => Stream<Decimal, Decimal>
+	wma: (period: number) => Stream<Decimal, Decimal>
+	zlema: (period: number) => Stream<Decimal, Decimal>
+}
