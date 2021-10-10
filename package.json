@@ -1,28 +1,33 @@
 {
 	"name": "stindicators",
 	"version": "0.0.1",
-	"type": "module",
-	"main": "dist/index.js",
+	"exports": {
+		"import": "./dist/index.js",
+		"require": "./dist/index.js"
+	},
 	"types": "src/typings.d.ts",
 	"license": "MIT",
 	"repository": "github:ilyashegay/stindicators",
 	"scripts": {
-		"build": "esbuild src/index.ts --bundle --format=esm --external:decimal.js --target=node14 --outfile=dist/index.js",
+		"build": "npm run build:mjs && npm run build:cjs",
+		"build:mjs": "esbuild src/index.ts --bundle --format=esm --external:decimal.js --target=node14 --outfile=dist/index.mjs",
+		"build:cjs": "esbuild src/index.ts --bundle --format=cjs --external:decimal.js --target=node14 --outfile=dist/index.cjs",
 		"tsc": "tsc --noEmit --skipLibCheck --project tsconfig.json",
+		"types": "tsc --declaration --emitDeclarationOnly --project tsconfig.json",
 		"lint": "eslint --ext js,ts src test",
-		"test": "uvu -r esbuild-register"
+		"test": "uvu -r esbuild-register test test"
 	},
 	"dependencies": {
 		"decimal.js": "^10.3.1"
 	},
 	"devDependencies": {
-		"@typescript-eslint/eslint-plugin": "^4.31.2",
-		"@typescript-eslint/parser": "^4.31.2",
-		"esbuild": "^0.13.2",
+		"@typescript-eslint/eslint-plugin": "^4.33.0",
+		"@typescript-eslint/parser": "^4.33.0",
+		"esbuild": "^0.13.4",
 		"esbuild-register": "^3.0.0",
 		"eslint": "^7.32.0",
 		"typescript": "^4.4.3",
-		"uvu": "^0.5.1"
+		"uvu": "^0.5.2"
 	},
 	"prettier": {
 		"semi": false,

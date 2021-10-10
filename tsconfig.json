@@ -8,7 +8,6 @@
 		"module": "CommonJS",
 		"lib": ["ES2020"],
 		"baseUrl": ".",
-		"noEmit": true,
 		"declaration": true,
 		"declarationDir": "./types"
 	}
