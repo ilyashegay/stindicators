@@ -3,7 +3,7 @@ import descriptors from './descriptors'
 
 export { initIndicators, operators } from './preset'
 export { default as descriptors } from './descriptors'
-export {
+export type {
 	Candle,
 	Stream,
 	IndicatorFn,
@@ -12,9 +12,8 @@ export {
 	IndicatorFnRecord,
 	IndicatorDescriptor,
 	IndicatorType,
-	makeStatefulMap,
-	makeDescriptor,
 } from './utils'
+export { makeStatefulMap, makeDescriptor } from './utils'
 export { decay, edecay, max, min } from './math.operators'
 export {
 	pipe,

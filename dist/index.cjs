@@ -149,7 +149,7 @@ function lag(period, initialValue) {
       const inputs = new RollingList(period);
       return (head) => {
         const tail = inputs.push(head);
-        const value = tail != null ? tail : initialValue;
+        const value = tail ?? initialValue;
         if (value !== void 0)
           next(value);
       };
@@ -168,8 +168,7 @@ function forkWithLag(period, initialValue) {
     } else {
       const inputs = new RollingList(period);
       return (head) => {
-        var _a;
-        const tail = (_a = inputs.push(head)) != null ? _a : initialValue;
+        const tail = inputs.push(head) ?? initialValue;
         if (tail !== void 0)
           next([head, tail]);
       };

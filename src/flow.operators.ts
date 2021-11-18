@@ -240,7 +240,7 @@ export function listFork<T, R>(ops: readonly Stream<T, R>[]): Stream<T, R[]> {
 		return (value) => {
 			subject.push(value)
 			if (++i > lb) {
-				next(values)
+				next(values as R[])
 				values = Array(ops.length)
 			}
 		}
@@ -261,7 +261,7 @@ export function fastListFork<T, R>(
 		}
 		return (value) => {
 			subject.push(value)
-			next(values)
+			next(values as R[])
 			values = Array(ops.length)
 		}
 	})
