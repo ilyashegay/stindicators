@@ -21,12 +21,13 @@
 		"decimal.js": "^10.3.1"
 	},
 	"devDependencies": {
-		"@typescript-eslint/eslint-plugin": "^4.33.0",
-		"@typescript-eslint/parser": "^4.33.0",
-		"esbuild": "^0.13.4",
-		"esbuild-register": "^3.0.0",
-		"eslint": "^7.32.0",
-		"typescript": "^4.4.3",
+		"@typescript-eslint/eslint-plugin": "^5.4.0",
+		"@typescript-eslint/parser": "^5.4.0",
+		"esbuild": "^0.13.14",
+		"esbuild-register": "^3.1.2",
+		"eslint": "^8.2.0",
+		"eslint-config-prettier": "^8.3.0",
+		"typescript": "^4.5.0",
 		"uvu": "^0.5.2"
 	},
 	"prettier": {
@@ -44,20 +45,11 @@
 		"env": {
 			"es2020": true
 		},
-		"plugins": [
-			"@typescript-eslint"
-		],
 		"extends": [
 			"eslint:recommended",
 			"plugin:@typescript-eslint/recommended",
-			"plugin:@typescript-eslint/recommended-requiring-type-checking"
-		],
-		"rules": {
-			"no-mixed-spaces-and-tabs": [
-				"warn",
-				"smart-tabs"
-			],
-			"@typescript-eslint/explicit-module-boundary-types": "off"
-		}
+			"plugin:@typescript-eslint/recommended-requiring-type-checking",
+			"prettier"
+		]
 	}
 }
