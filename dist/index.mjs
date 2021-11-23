@@ -606,50 +606,14 @@ var psar = (accel_step, accel_max) => pipe(fork(pipe(highprice, memAll(3)), pipe
 
 // src/preset.ts
 var makeMapper = (op) => (fn) => (...args) => op.pipe(fn(...args));
-var operators = {
-  apo,
-  bbands,
-  cmo,
-  crossany: () => crossany,
-  crossover: () => crossover,
-  decay,
-  dema,
-  dpo,
-  edecay,
-  ema,
-  fosc,
-  hma,
-  kama,
-  lag,
-  linreg,
-  linregintercept,
-  linregslope,
-  macd,
-  max,
-  md,
-  min,
-  mom,
-  msw,
-  ppo,
-  roc,
-  rocr,
-  rsi,
-  sma,
-  stddev,
-  stderr,
-  stochrsi,
-  tema,
-  trima,
-  trix,
-  tsf,
-  variance,
-  vhf,
-  vidya,
-  volatility,
-  wilders,
-  wma,
-  zlema
-};
+function initIndicators(mapper) {
+  const m = makeMapper(map(mapper));
+  const result = {};
+  for (const key in indicators) {
+    result[key] = m(indicators[key]);
+  }
+  return result;
+}
 var mp = makeMapper(closeprice);
 var indicators = {
   open: () => openprice,
@@ -727,14 +691,50 @@ var indicators = {
   wma: mp(wma),
   zlema: mp(zlema)
 };
-function initIndicators(mapper) {
-  const m = makeMapper(map(mapper));
-  const result = {};
-  for (const key in indicators) {
-    result[key] = m(indicators[key]);
-  }
-  return result;
-}
+var operators = {
+  apo,
+  bbands,
+  cmo,
+  crossany: () => crossany,
+  crossover: () => crossover,
+  decay,
+  dema,
+  dpo,
+  edecay,
+  ema,
+  fosc,
+  hma,
+  kama,
+  lag,
+  linreg,
+  linregintercept,
+  linregslope,
+  macd,
+  max,
+  md,
+  min,
+  mom,
+  msw,
+  ppo,
+  roc,
+  rocr,
+  rsi,
+  sma,
+  stddev,
+  stderr,
+  stochrsi,
+  tema,
+  trima,
+  trix,
+  tsf,
+  variance,
+  vhf,
+  vidya,
+  volatility,
+  wilders,
+  wma,
+  zlema
+};
 
 // src/descriptors.ts
 var IndicatorType;
