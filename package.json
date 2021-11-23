@@ -7,14 +7,15 @@
 	},
 	"types": "src/typings.d.ts",
 	"license": "MIT",
-	"repository": "github:ilyashegay/stindicators",
+	"repository": "https://github.com/ilyashegay/stindicators",
 	"scripts": {
 		"build": "npm run build:mjs && npm run build:cjs",
 		"build:mjs": "esbuild src/index.ts --bundle --format=esm --external:decimal.js --target=node14 --outfile=dist/index.mjs",
 		"build:cjs": "esbuild src/index.ts --bundle --format=cjs --external:decimal.js --target=node14 --outfile=dist/index.cjs",
-		"tsc": "tsc --noEmit --skipLibCheck --project tsconfig.json",
 		"types": "tsc --declaration --emitDeclarationOnly --project tsconfig.json",
-		"lint": "eslint --ext js,ts src test",
+		"lint": "npm run tsc && npm run eslint",
+		"tsc": "tsc --noEmit --skipLibCheck --project tsconfig.json",
+		"eslint": "eslint --ext js,ts src test",
 		"test": "uvu -r esbuild-register test test"
 	},
 	"dependencies": {
@@ -23,11 +24,11 @@
 	"devDependencies": {
 		"@typescript-eslint/eslint-plugin": "^5.4.0",
 		"@typescript-eslint/parser": "^5.4.0",
-		"esbuild": "^0.13.14",
+		"esbuild": "^0.13.15",
 		"esbuild-register": "^3.1.2",
-		"eslint": "^8.2.0",
+		"eslint": "^8.3.0",
 		"eslint-config-prettier": "^8.3.0",
-		"typescript": "^4.5.0",
+		"typescript": "^4.5.2",
 		"uvu": "^0.5.2"
 	},
 	"prettier": {
@@ -37,9 +38,7 @@
 		"trailingComma": "all"
 	},
 	"eslintConfig": {
-		"parser": "@typescript-eslint/parser",
 		"parserOptions": {
-			"sourceType": "module",
 			"project": "./tsconfig.json"
 		},
 		"env": {
