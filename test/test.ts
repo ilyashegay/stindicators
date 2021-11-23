@@ -4,11 +4,6 @@ import * as assert from 'uvu/assert'
 import * as I from '../src/index'
 import data from './data.json'
 
-const fns = { ...I.indicators, ...I.operators } as I.IndicatorFnRecord<
-	I.Candle | Decimal | Decimal[] | [Decimal, Decimal],
-	number | Decimal | Decimal[]
->
-
 type Test = {
 	id: string
 	args: number[]
@@ -19,6 +14,16 @@ type Test = {
 	)[]
 	outputs: (string | string[])[]
 }
+
+type TestIndicatorFn = I.IndicatorFn<
+	I.Candle | Decimal | Decimal[] | [Decimal, Decimal],
+	number | Decimal | Decimal[]
+>
+
+const fns = { ...I.indicators, ...I.operators } as Record<
+	string,
+	TestIndicatorFn
+>
 
 /**
  * Returns expected if received is within 0.1% of expected, returns received otherwise.

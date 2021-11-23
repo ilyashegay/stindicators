@@ -1,13 +1,19 @@
+import Decimal from 'decimal.js'
 import * as M from './math'
 import * as I from './indicators'
 import { Stream, lag, map } from './stream'
-import { Candle } from './indicators'
+
+export type Candle = {
+	open: Decimal
+	high: Decimal
+	low: Decimal
+	close: Decimal
+	volume: Decimal
+}
 
 export type IndicatorFn<T, R, P extends number[] = number[]> = (
 	...args: P
 ) => Stream<T, R>
-
-export type IndicatorFnRecord<T, R> = Record<string, IndicatorFn<T, R>>
 
 const makeMapper =
 	<A, B>(op: Stream<A, B>) =>
@@ -15,49 +21,21 @@ const makeMapper =
 	(...args: P) =>
 		op.pipe(fn(...args))
 
-export const operators = {
-	apo: M.apo,
-	bbands: M.bbands,
-	cmo: M.cmo,
-	crossany: () => M.crossany,
-	crossover: () => M.crossover,
-	decay: M.decay,
-	dema: M.dema,
-	dpo: M.dpo,
-	edecay: M.edecay,
-	ema: M.ema,
-	fosc: M.fosc,
-	hma: M.hma,
-	kama: M.kama,
-	lag,
-	linreg: M.linreg,
-	linregintercept: M.linregintercept,
-	linregslope: M.linregslope,
-	macd: M.macd,
-	max: M.max,
-	md: M.md,
-	min: M.min,
-	mom: M.mom,
-	msw: M.msw,
-	ppo: M.ppo,
-	roc: M.roc,
-	rocr: M.rocr,
-	rsi: M.rsi,
-	sma: M.sma,
-	stddev: M.stddev,
-	stderr: M.stderr,
-	stochrsi: M.stochrsi,
-	tema: M.tema,
-	trima: M.trima,
-	trix: M.trix,
-	tsf: M.tsf,
-	variance: M.variance,
-	vhf: M.vhf,
-	vidya: M.vidya,
-	volatility: M.volatility,
-	wilders: M.wilders,
-	wma: M.wma,
-	zlema: M.zlema,
+export function initIndicators<T>(mapper: (input: T) => Candle) {
+	type Indicators = typeof indicators
+	type MapFn<T, F> = F extends IndicatorFn<Candle, infer R, infer P>
+		? (...args: P) => Stream<T, R>
+		: never
+	type CustomIndicatorMap<T> = {
+		[key in keyof Indicators]: MapFn<T, Indicators[key]>
+	}
+	const m = makeMapper(map(mapper))
+	const result = {} as CustomIndicatorMap<T>
+	for (const key in indicators) {
+		// @ts-expect-error union keys error
+		result[key] = m(indicators[key as keyof Indicators])
+	}
+	return result
 }
 
 const mp = makeMapper(I.closeprice)
@@ -139,22 +117,47 @@ export const indicators = {
 	zlema: mp(M.zlema),
 }
 
-type Indicators = typeof indicators
-type MapFn<T, F> = F extends IndicatorFn<Candle, infer R, infer P>
-	? (...args: P) => Stream<T, R>
-	: never
-type CustomIndicatorMap<T> = {
-	[key in keyof Indicators]: MapFn<T, Indicators[key]>
-}
-
-export function initIndicators<T>(
-	mapper: (input: T) => Candle,
-): CustomIndicatorMap<T> {
-	const m = makeMapper(map(mapper))
-	const result = {} as CustomIndicatorMap<T>
-	for (const key in indicators) {
-		// @ts-expect-error union keys error
-		result[key] = m(indicators[key as keyof Indicators])
-	}
-	return result
+export const operators = {
+	apo: M.apo,
+	bbands: M.bbands,
+	cmo: M.cmo,
+	crossany: () => M.crossany,
+	crossover: () => M.crossover,
+	decay: M.decay,
+	dema: M.dema,
+	dpo: M.dpo,
+	edecay: M.edecay,
+	ema: M.ema,
+	fosc: M.fosc,
+	hma: M.hma,
+	kama: M.kama,
+	lag,
+	linreg: M.linreg,
+	linregintercept: M.linregintercept,
+	linregslope: M.linregslope,
+	macd: M.macd,
+	max: M.max,
+	md: M.md,
+	min: M.min,
+	mom: M.mom,
+	msw: M.msw,
+	ppo: M.ppo,
+	roc: M.roc,
+	rocr: M.rocr,
+	rsi: M.rsi,
+	sma: M.sma,
+	stddev: M.stddev,
+	stderr: M.stderr,
+	stochrsi: M.stochrsi,
+	tema: M.tema,
+	trima: M.trima,
+	trix: M.trix,
+	tsf: M.tsf,
+	variance: M.variance,
+	vhf: M.vhf,
+	vidya: M.vidya,
+	volatility: M.volatility,
+	wilders: M.wilders,
+	wma: M.wma,
+	zlema: M.zlema,
 }

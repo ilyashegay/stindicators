@@ -15,14 +15,7 @@ import {
 } from './stream'
 import * as M from './math'
 import { Smoother, ZERO, ONE, HUNDRED } from './math'
-
-export type Candle = {
-	open: Decimal
-	high: Decimal
-	low: Decimal
-	close: Decimal
-	volume: Decimal
-}
+import { Candle } from './preset'
 
 const MIN_VOLUME = new Decimal(0.00000001)
 
