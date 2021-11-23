@@ -12,6 +12,5 @@
 		"baseUrl": ".",
 		"declaration": true,
 		"declarationDir": "./types"
-	},
-	"include": ["./src/index.ts"]
+	}
 }
