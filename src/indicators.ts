@@ -1,14 +1,6 @@
+import Decimal from 'decimal.js'
 import {
-	Decimal,
-	Candle,
-	Smoother,
 	Matcher,
-	makeStatefulMap,
-	ZERO,
-	ONE,
-	HUNDRED,
-} from './utils'
-import {
 	pipe,
 	fork,
 	scan,
@@ -19,8 +11,18 @@ import {
 	flatMap,
 	forkWithLag,
 	mapWithLast,
-} from './flow.operators'
-import * as M from './math.operators'
+	makeStatefulMap,
+} from './stream'
+import * as M from './math'
+import { Smoother, ZERO, ONE, HUNDRED } from './math'
+
+export type Candle = {
+	open: Decimal
+	high: Decimal
+	low: Decimal
+	close: Decimal
+	volume: Decimal
+}
 
 const MIN_VOLUME = new Decimal(0.00000001)
 
@@ -65,8 +67,14 @@ export const ad = scan((ad: Decimal, candle: Candle) => {
 	)
 }, ZERO)
 
-export const adosc = (short: Smoother, long: Smoother) =>
+export const custom_adosc = (short: Smoother, long: Smoother) =>
 	pipe(ad, M.minus(short, long))
+
+export const adosc = (shortPeriod: number, longPeriod: number) =>
+	pipe(
+		custom_adosc(M.ema(shortPeriod), M.ema(longPeriod)),
+		skip(longPeriod - 1),
+	)
 
 export const ao = pipe(medprice, M.minus(M.sma(5), M.sma(34)))
 
@@ -87,28 +95,61 @@ export const aroon = (period: number) =>
 export const aroonosc = (period: number) =>
 	M.minus(aroon_up(period), aroon_down(period))
 
-export const adx = (dm_smoother: Smoother, dx_smoother: Smoother) =>
-	pipe(dx(dm_smoother), dx_smoother)
+const custom_dm_smoother = (period: number) =>
+	M.custom_dm_smoother(period, M.factors.d(period))
 
-export const adxr = (
+export const custom_adx = (dm_smoother: Smoother, dx_smoother: Smoother) =>
+	pipe(custom_dx(dm_smoother), dx_smoother)
+
+export const adx = (period: number) => {
+	const smoother = custom_dm_smoother(period)
+	return custom_adx(
+		smoother,
+		pipe(
+			smoother,
+			map((val) => val.div(period)),
+		),
+	)
+}
+
+export const custom_adxr = (
 	dm_smoother: Smoother,
 	dx_smoother: Smoother,
 	period: number,
 ) =>
 	pipe(
-		adx(dm_smoother, dx_smoother),
+		custom_adx(dm_smoother, dx_smoother),
 		forkWithLag(period - 1),
 		flatMap((head, tail) => head.plus(tail).div(2)),
 	)
 
-export const atr = (smoother: Smoother, skipFirst: boolean) =>
-	pipe(tr(skipFirst), smoother)
-
-export const di = (dm_smoother: Smoother, tr_smoother: Smoother) =>
-	fork(
-		M.div(dm_up_smooth(dm_smoother), atr(tr_smoother, true), HUNDRED),
-		M.div(dm_down_smooth(dm_smoother), atr(tr_smoother, true), HUNDRED),
+export const adxr = (period: number) => {
+	const smoother = custom_dm_smoother(period)
+	return custom_adxr(
+		smoother,
+		pipe(
+			smoother,
+			map((val) => val.div(period)),
+		),
+		period,
 	)
+}
+
+export const custom_atr = (smoother: Smoother, skipFirst: boolean) =>
+	pipe(custom_tr(skipFirst), smoother)
+
+export const atr = (period: number) => custom_atr(M.wilders(period), false)
+
+export const custom_di = (dm_smoother: Smoother, tr_smoother: Smoother) =>
+	fork(
+		M.div(dm_up_smooth(dm_smoother), custom_atr(tr_smoother, true), HUNDRED),
+		M.div(dm_down_smooth(dm_smoother), custom_atr(tr_smoother, true), HUNDRED),
+	)
+
+export const di = (period: number) => {
+	const smoother = custom_dm_smoother(period)
+	return custom_di(smoother, smoother)
+}
 
 export const dm_up = mapWithLast((candle: Candle, last) => {
 	const up = candle.high.minus(last.high)
@@ -125,10 +166,10 @@ export const dm_down = mapWithLast((candle: Candle, last) => {
 const dm_up_smooth = (smoother: Smoother) => pipe(dm_up, smoother)
 const dm_down_smooth = (smoother: Smoother) => pipe(dm_down, smoother)
 
-export const dm = (smoother: Smoother) =>
+export const custom_dm = (smoother: Smoother) =>
 	fork(dm_up_smooth(smoother), dm_down_smooth(smoother))
 
-export const dx = (dm_smoother: Smoother) =>
+export const custom_dx = (dm_smoother: Smoother) =>
 	pipe(
 		M.oscillators.diff_over_sum(
 			dm_up_smooth(dm_smoother),
@@ -137,7 +178,10 @@ export const dx = (dm_smoother: Smoother) =>
 		map((val) => val.abs()),
 	)
 
-export const tr = (skipFirst = false) =>
+export const dm = (period: number) => custom_dm(custom_dm_smoother(period))
+export const dx = (period: number) => custom_dx(custom_dm_smoother(period))
+
+export const custom_tr = (skipFirst = false) =>
 	makeStatefulMap<Candle, Decimal>(() => {
 		let prev: Candle | undefined
 		return (candle) => {
@@ -155,6 +199,8 @@ export const tr = (skipFirst = false) =>
 		}
 	})
 
+export const tr = () => custom_tr(false)
+
 export const cci = (period: number) =>
 	pipe(
 		typprice,
@@ -167,10 +213,17 @@ export const bop = map((candle: Candle) =>
 	candle.close.minus(candle.open).div(candle.high.minus(candle.low)),
 )
 
-export const cvi = (period: number, smoother: Smoother) =>
+export const custom_cvi = (period: number, smoother: Smoother) =>
 	pipe(range, smoother, M.roc(period), M.multiplyBy(HUNDRED))
 
-export const emv = (scale: number) =>
+export const cvi = (period: number) =>
+	custom_cvi(period, pipe(M.ema(period), skip(period - 1)))
+
+export const marketfi = map((candle: Candle) =>
+	candle.high.minus(candle.low).div(candle.volume),
+)
+
+export const custom_emv = (scale: number) =>
 	pipe(
 		fork(
 			pipe(
@@ -182,9 +235,7 @@ export const emv = (scale: number) =>
 		flatMap((hl, marketfi) => hl.times(marketfi).times(scale)),
 	)
 
-export const marketfi = map((candle: Candle) =>
-	candle.high.minus(candle.low).div(candle.volume),
-)
+export const emv = custom_emv(10000)
 
 const kvo_trend = pipe(
 	map((candle: Candle) => candle.high.plus(candle.low).plus(candle.close)),
@@ -215,7 +266,7 @@ const kvo_cm = pipe(
 	scan((cm, [trend, [dm, last_dm]]) => (trend ? cm : last_dm).plus(dm), ZERO),
 )
 
-export const kvo = (short: Smoother, long: Smoother) =>
+export const custom_kvo = (short: Smoother, long: Smoother) =>
 	pipe(
 		fork(volume, kvo_trend, range, kvo_cm),
 		flatMap((volume, trend, dm, cm) =>
@@ -226,12 +277,21 @@ export const kvo = (short: Smoother, long: Smoother) =>
 		M.minus(short, long),
 	)
 
-export const mass = (period: number, ema_period: number, factor: number) =>
+export const kvo = (short: number, long: number) =>
+	custom_kvo(M.ema(short), M.ema(long))
+
+export const custom_mass = (
+	period: number,
+	ema_period: number,
+	factor: number,
+) =>
 	pipe(
 		range,
-		M.div(M.ema(factor), M.double_ema(ema_period, factor)),
+		M.div(M.custom_ema(factor), M.double_ema(ema_period, factor)),
 		M.sum(period),
 	)
+
+export const mass = (period: number) => custom_mass(period, 9, M.factors.e(9))
 
 export const mfi = (period: number) =>
 	pipe(
@@ -252,8 +312,10 @@ export const mfi = (period: number) =>
 		),
 	)
 
-export const natr = (smoother: Smoother) =>
-	M.div(atr(smoother, false), closeprice, HUNDRED)
+export const custom_natr = (smoother: Smoother) =>
+	M.div(custom_atr(smoother, false), closeprice, HUNDRED)
+
+export const natr = (period: number) => custom_natr(M.wilders(period))
 
 const vi = (condition: Matcher<Decimal>) =>
 	pipe(
@@ -288,7 +350,7 @@ export const qstick = (period: number) =>
 		M.sma(period),
 	)
 
-export const stoch = (
+export const custom_stoch = (
 	fast_k_period: number,
 	k_smoother: Smoother,
 	d_smoother: Smoother,
@@ -303,6 +365,9 @@ export const stoch = (
 		k_smoother,
 		fork(identity(), d_smoother),
 	)
+
+export const stoch = (period1: number, period2: number, period3: number) =>
+	custom_stoch(period1, M.sma(period2), M.sma(period3))
 
 export const ultosc = (period1: number, period2: number, period3: number) =>
 	pipe(
@@ -386,19 +451,19 @@ export const fisher = (period: number) =>
 
 export const psar = (accel_step: number, accel_max: number) =>
 	pipe(
-		fork(pipe(highprice, memAll(3)), pipe(lowprice, memAll(3)), M.index),
+		fork(pipe(highprice, memAll(3)), pipe(lowprice, memAll(3))),
 		skip(1),
 		makeStatefulMap(() => {
 			let lng: boolean
 			let sar: Decimal
 			let extreme: Decimal
 			let accel = accel_step
-			return ([highs, lows, index]) => {
-				const high = highs.get(index)
-				const low = lows.get(index)
-				if (index === 1) {
-					const lastHigh = highs.get(index - 1)
-					const lastLow = lows.get(index - 1)
+			return ([highs, lows]) => {
+				const high = highs.get()
+				const low = lows.get()
+				if (highs.index === 1) {
+					const lastHigh = highs.get(1)
+					const lastLow = lows.get(1)
 					lng = lastHigh.plus(lastLow).lte(high.plus(low))
 					if (lng) {
 						extreme = lastHigh
@@ -410,10 +475,10 @@ export const psar = (accel_step: number, accel_max: number) =>
 				}
 				sar = extreme.minus(sar).times(accel).plus(sar)
 				if (lng) {
-					if (index >= 2) {
-						sar = Decimal.min(sar, lows.get(index - 2))
+					if (highs.index >= 2) {
+						sar = Decimal.min(sar, lows.get(2))
 					}
-					sar = Decimal.min(sar, lows.get(index - 1))
+					sar = Decimal.min(sar, lows.get(1))
 					if (high > extreme) {
 						extreme = high
 						accel = Math.min(accel_max, accel + accel_step)
@@ -425,10 +490,10 @@ export const psar = (accel_step: number, accel_max: number) =>
 						lng = false
 					}
 				} else {
-					if (index >= 2) {
-						sar = Decimal.max(sar, highs.get(index - 2))
+					if (highs.index >= 2) {
+						sar = Decimal.max(sar, highs.get(2))
 					}
-					sar = Decimal.max(sar, highs.get(index - 1))
+					sar = Decimal.max(sar, highs.get(1))
 					if (low < extreme) {
 						extreme = low
 						accel = Math.min(accel_max, accel + accel_step)

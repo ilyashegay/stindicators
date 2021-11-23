@@ -1,23 +1,49 @@
-import {
-	Stream,
-	Handler,
-	Matcher,
-	invariant,
-	makeOperator,
-	makeStatefulMap,
-} from './utils'
+type Handler<T> = (value: T) => void
+
+export class Stream<P, R> {
+	constructor(
+		public fn: (
+			stream: (next: Handler<P>) => void,
+		) => (next: Handler<R>) => void,
+		public lb = 0,
+	) {}
+	public pipe<T>(op: Stream<R, T>) {
+		return new Stream<P, T>((source) => op.fn(this.fn(source)), this.lb + op.lb)
+	}
+	public init() {
+		let n: Handler<P> | undefined
+		let v: R | undefined
+		this.fn((next) => {
+			n = next
+		})((value) => {
+			v = value
+		})
+		return (value: P) => {
+			n?.(value)
+			return v
+		}
+	}
+}
+
+export type StreamMap<T, R extends Record<string, unknown>> = {
+	[key in keyof R]: Stream<T, R[key]>
+}
+
+function invariant(condition: unknown, message?: string): asserts condition {
+	if (!condition) throw new Error(message)
+}
 
 class Router<T> {
 	private h: Handler<T>[] = []
 	private s = (next: Handler<T>) => {
 		this.h.push(next)
 	}
-	push(value: T) {
+	public push(value: T) {
 		for (let i = 0; i < this.h.length; i++) {
 			this.h[i](value)
 		}
 	}
-	add<A>(op: Stream<T, A>, next: Handler<A>) {
+	public add<A>(op: Stream<T, A>, next: Handler<A>) {
 		op.fn(this.s)(next)
 	}
 }
@@ -25,45 +51,52 @@ class Router<T> {
 class RollingList<T> {
 	private items: T[]
 	public length = 0
+	public index = -1
 	constructor(public size: number) {
+		invariant(size > 0)
 		this.items = Array<T>(size)
 	}
 	public push(item: T): T | undefined {
 		const index = this.length % this.size
 		const current = this.items[index]
 		this.items[index] = item
-		this.length += 1
+		this.length++
+		this.index++
 		return current
 	}
-	public get(index: number): T {
+	public get(index = 0): T {
 		invariant(
-			index >= 0 && index < this.length && index >= this.length - this.size,
+			index >= 0 && index < this.size && index < this.length,
 			'RollingList index out of bounds',
 		)
-		const item = this.items[index % this.size]
-		invariant(item, 'Rolling List item is undefined')
-		return item
+		return this.items[(this.index - index) % this.size]
 	}
 }
 
-const self = <T>(x: T): T => x
+export const identity = <T>() => new Stream<T, T>((x) => x)
 
-export function identity<T>() {
-	return new Stream<T, T>(self)
-}
+export const makeOperator = <P, R>(
+	fn: (next: Handler<R>) => Handler<P>,
+	lb = 0,
+) => new Stream<P, R>((source) => (next) => source(fn(next)), lb)
 
-export function map<P, R>(callback: (value: P, index: number) => R) {
-	return makeStatefulMap<P, R>(() => {
+export const makeStatefulMap = <P, R>(fn: () => (value: P) => R) =>
+	new Stream<P, R>((source) => (next) => {
+		const mapper = fn()
+		source((value) => next(mapper(value)))
+	})
+
+export const map = <P, R>(callback: (value: P, index: number) => R) =>
+	makeStatefulMap<P, R>(() => {
 		let i = 0
 		return (value) => callback(value, i++)
 	})
-}
 
-export function scan<P, R>(
+export const scan = <P, R>(
 	callback: (accumulator: R, value: P, index: number) => R,
 	initialValue: R,
-) {
-	return makeStatefulMap<P, R>(() => {
+) =>
+	makeStatefulMap<P, R>(() => {
 		let state: R = initialValue
 		let i = 0
 		return (value) => {
@@ -71,10 +104,9 @@ export function scan<P, R>(
 			return state
 		}
 	})
-}
 
-export function skip<P>(count: number) {
-	return makeOperator<P, P>((next) => {
+export const skip = <P>(count: number) =>
+	makeOperator<P, P>((next) => {
 		let i = 0
 		return (value) => {
 			if (++i > count) {
@@ -82,17 +114,15 @@ export function skip<P>(count: number) {
 			}
 		}
 	}, count)
-}
 
-export function flatMap<T extends unknown[], R>(mapper: (...args: T) => R) {
-	return makeStatefulMap<T, R>(() => (value) => mapper(...value))
-}
+export const flatMap = <T extends unknown[], R>(mapper: (...args: T) => R) =>
+	makeStatefulMap<T, R>(() => (value) => mapper(...value))
 
-export function mapWithLast<T, R>(
+export const mapWithLast = <T, R>(
 	mapper: (value: T, prev: T) => R,
 	firstResult?: R,
-) {
-	return makeOperator<T, R>(
+) =>
+	makeOperator<T, R>(
 		(next) => {
 			let prev: T | undefined
 			return (val) => {
@@ -106,11 +136,9 @@ export function mapWithLast<T, R>(
 		},
 		firstResult !== undefined ? 0 : 1,
 	)
-}
 
-export function lag<T>(period: number, initialValue?: T) {
-	invariant(period > 0, 'Lag period must be at least 1')
-	return makeOperator<T, T>(
+export const lag = <T>(period: number, initialValue?: T) =>
+	makeOperator<T, T>(
 		(next) => {
 			if (period === 1) {
 				let prev = initialValue
@@ -130,10 +158,9 @@ export function lag<T>(period: number, initialValue?: T) {
 		},
 		initialValue !== undefined ? 0 : period,
 	)
-}
 
-export function forkWithLag<T>(period: number, initialValue?: T) {
-	return makeOperator<T, [T, T]>(
+export const forkWithLag = <T>(period: number, initialValue?: T) =>
+	makeOperator<T, [T, T]>(
 		(next) => {
 			if (period === 1) {
 				let prev = initialValue
@@ -151,53 +178,63 @@ export function forkWithLag<T>(period: number, initialValue?: T) {
 		},
 		initialValue !== undefined ? 0 : period,
 	)
-}
 
-export function memAll<T>(period: number) {
-	return makeStatefulMap<T, RollingList<T>>(() => {
-		const inputs = new RollingList<T>(period)
-		return (head) => {
-			inputs.push(head)
-			return inputs
-		}
-	})
-}
-
-export function matchItem<T>(period: number, matcher: Matcher<T>) {
-	return makeOperator<T, [T, number]>((next) => {
-		const inputs = new RollingList<T>(period)
-		let result: T
-		let resultIndex = -1
-		let index = -1
-		return (input: T) => {
-			index += 1
-			inputs.push(input)
-			if (index < inputs.size - 1) {
-				return
+export const memAll = <T>(period: number, skip = false) =>
+	makeOperator<T, RollingList<T>>(
+		(next) => {
+			const inputs = new RollingList<T>(period)
+			return (head) => {
+				inputs.push(head)
+				if (!skip || inputs.length >= inputs.size) next(inputs)
 			}
-			const trail = index - inputs.size + 1
-			if (resultIndex < trail) {
-				result = inputs.get(trail)
-				resultIndex = trail
-				for (let i = trail; i <= index; i += 1) {
-					const item = inputs.get(i)
-					if (matcher(result, item)) {
-						result = item
-						resultIndex = i
+		},
+		skip ? period - 1 : 0,
+	)
+
+export type Matcher<T> = (current: T, next: T) => boolean
+
+export const matchItem = <T>(period: number, matcher: Matcher<T>) =>
+	memAll<T>(period, true).pipe(
+		makeStatefulMap(() => {
+			let d = period - 1
+			return (inputs) => {
+				if (++d < period) {
+					if (matcher(inputs.get(d), inputs.get())) {
+						d = 0
+					}
+					return inputs.get(d)
+				}
+				d = period - 1
+				for (let i = period - 2; i >= 0; i--) {
+					if (matcher(inputs.get(d), inputs.get(i))) {
+						d = i
 					}
 				}
-			} else if (matcher(result, input)) {
-				result = input
-				resultIndex = index
+				return inputs.get(d)
 			}
-			next([result, resultIndex])
-		}
-	}, period - 1)
-}
+		}),
+	)
 
-export function mapFork<T, R extends Record<string, unknown>>(ops: {
-	[key in keyof R]: Stream<T, R[key]>
-}) {
+export const matchDistance = <T>(period: number, matcher: Matcher<T>) =>
+	memAll<T>(period, true).pipe(
+		scan((prev, inputs) => {
+			let next = prev + 1
+			if (next < period) {
+				return matcher(inputs.get(next), inputs.get()) ? 0 : next
+			}
+			next = prev
+			for (let i = period - 2; i >= 0; i--) {
+				if (matcher(inputs.get(next), inputs.get(i))) {
+					next = i
+				}
+			}
+			return next
+		}, period - 1),
+	)
+
+export function mapFork<T, R extends Record<string, unknown>>(
+	ops: StreamMap<T, R>,
+) {
 	const keys = Object.keys(ops) as (keyof R)[]
 	let lb = 0
 	for (const key of keys) {
@@ -205,15 +242,15 @@ export function mapFork<T, R extends Record<string, unknown>>(ops: {
 	}
 	return makeOperator<T, R>((next) => {
 		let values: Partial<R> = {}
-		const subject = new Router<T>()
+		const router = new Router<T>()
 		for (const key of keys) {
-			subject.add(ops[key], (value) => {
+			router.add(ops[key], (value) => {
 				values[key] = value
 			})
 		}
 		let i = 0
 		return (value) => {
-			subject.push(value)
+			router.push(value)
 			if (++i > lb) {
 				next(values as R)
 				values = {}
@@ -229,16 +266,16 @@ export function listFork<T, R>(ops: readonly Stream<T, R>[]): Stream<T, R[]> {
 	}
 	return makeOperator((next) => {
 		let values = Array(ops.length)
-		const subject = new Router<T>()
+		const router = new Router<T>()
 		for (let i = 0; i < ops.length; i++) {
 			const index = i
-			subject.add(ops[index], (value) => {
+			router.add(ops[index], (value) => {
 				values[index] = value
 			})
 		}
 		let i = 0
 		return (value) => {
-			subject.push(value)
+			router.push(value)
 			if (++i > lb) {
 				next(values as R[])
 				values = Array(ops.length)
@@ -252,15 +289,15 @@ export function fastListFork<T, R>(
 ): Stream<T, R[]> {
 	return makeOperator((next) => {
 		let values = Array(ops.length)
-		const subject = new Router<T>()
+		const router = new Router<T>()
 		for (let i = 0; i < ops.length; i++) {
 			const index = i
-			subject.add(ops[index], (value) => {
+			router.add(ops[index], (value) => {
 				values[index] = value
 			})
 		}
 		return (value) => {
-			subject.push(value)
+			router.push(value)
 			next(values as R[])
 			values = Array(ops.length)
 		}

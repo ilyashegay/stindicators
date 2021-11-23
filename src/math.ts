@@ -1,5 +1,6 @@
-import { Stream, Decimal, Matcher, Smoother, ZERO, ONE, HUNDRED } from './utils'
+import Decimal from 'decimal.js'
 import {
+	Stream,
 	pipe,
 	fork,
 	skip,
@@ -13,7 +14,19 @@ import {
 	forkWithLag,
 	memAll,
 	matchItem,
-} from './flow.operators'
+	matchDistance,
+} from './stream'
+
+export const ZERO = new Decimal(0)
+export const ONE = new Decimal(1)
+export const HUNDRED = new Decimal(100)
+
+export type Smoother = Stream<Decimal, Decimal>
+
+export const factors = {
+	d: (period: number): number => (period - 1) / period,
+	e: (period: number): number => 2 / (period + 1),
+}
 
 const wrapBinaryOperator =
 	(op: Stream<[Decimal, Decimal], Decimal>) =>
@@ -119,65 +132,68 @@ export const edecay = (period: number) =>
 		ZERO,
 	)
 
-const match_item = (period: number, matcher: Matcher<Decimal>) => {
-	return pipe(
-		matchItem(period, matcher),
-		map((match) => match[0]),
-	)
-}
-
-const match_distance = (period: number, matcher: Matcher<Decimal>) => {
-	return pipe(
-		fork(matchItem(period, matcher), index),
-		flatMap((match, index) => index - match[1]),
-	)
-}
-
 export const max = (period: number) =>
-	match_item(period, (current, next) => next.gte(current))
+	matchItem(period, (current, next: Decimal) => next.gte(current))
 export const min = (period: number) =>
-	match_item(period, (current, next) => next.lte(current))
+	matchItem(period, (current, next: Decimal) => next.lte(current))
 export const max_distance = (period: number) =>
-	match_distance(period, (current, next) => next.gte(current))
+	matchDistance(period, (current, next: Decimal) => next.gte(current))
 export const min_distance = (period: number) =>
-	match_distance(period, (current, next) => next.lte(current))
+	matchDistance(period, (current, next: Decimal) => next.lte(current))
 
-export const ema = (factor: number) =>
+export const custom_ema = (factor: number) =>
 	scan(
 		(ema, val: Decimal, index) =>
 			index === 0 ? val : val.times(factor).plus(ema.times(1 - factor)),
 		ZERO,
 	)
 
+export const ema = (period: number) => custom_ema(factors.e(period))
+
 export const double_ema = (period: number, factor: number) =>
-	pipe(ema(factor), skip(period - 1), ema(factor), skip(period - 1))
+	pipe(
+		custom_ema(factor),
+		skip(period - 1),
+		custom_ema(factor),
+		skip(period - 1),
+	)
 
 export const triple_ema = (period: number, factor: number) =>
 	pipe(
-		ema(factor),
+		custom_ema(factor),
 		skip(period - 1),
-		ema(factor),
+		custom_ema(factor),
 		skip(period - 1),
-		ema(factor),
+		custom_ema(factor),
 		skip(period - 1),
 	)
 
-export const dema = (period: number, factor: number) =>
+export const custom_dema = (period: number, factor: number) =>
 	pipe(
-		fork(ema(factor), double_ema(period, factor)),
+		fork(custom_ema(factor), double_ema(period, factor)),
 		flatMap((ema1, ema2) => ema1.times(2).minus(ema2)),
 	)
 
-export const tema = (period: number, factor: number) =>
+export const dema = (period: number) => custom_dema(period, factors.e(period))
+
+export const custom_tema = (period: number, factor: number) =>
 	pipe(
-		fork(ema(factor), double_ema(period, factor), triple_ema(period, factor)),
+		fork(
+			custom_ema(factor),
+			double_ema(period, factor),
+			triple_ema(period, factor),
+		),
 		flatMap((ema1, ema2, ema3) =>
 			ema1.times(3).minus(ema2.times(3)).plus(ema3),
 		),
 	)
 
-export const trix = (period: number, factor: number) =>
+export const tema = (period: number) => custom_tema(period, factors.e(period))
+
+export const custom_trix = (period: number, factor: number) =>
 	pipe(triple_ema(period, factor), forkWithLag(1), oscillate.diff_over_short)
+
+export const trix = (period: number) => custom_trix(period, factors.e(period))
 
 export const custom_dm_smoother = (period: number, factor: number) =>
 	pipe(
@@ -218,15 +234,18 @@ export const hma = (period: number) =>
 		wma(Math.floor(Math.sqrt(period))),
 	)
 
-export const zlema = (factor: number, lag: number) =>
+export const custom_zlema = (factor: number, lag: number) =>
 	pipe(
 		forkWithLag(lag, ZERO),
 		skip(lag - 1),
 		map(([head, tail], index) =>
 			index === 0 ? head : head.plus(head.minus(tail)),
 		),
-		ema(factor),
+		custom_ema(factor),
 	)
+
+export const zlema = (period: number) =>
+	custom_zlema(factors.e(period), Math.floor((period - 1) / 2))
 
 export const kama = (period: number) => {
 	const f = new Decimal(2).div(3)
@@ -286,22 +305,17 @@ export const trima = (period: number) =>
 
 export const md = (period: number) =>
 	pipe(
-		fork(index, sma(period), memAll<Decimal>(period)),
-		flatMap((index, sma, inputs) => {
+		fork(sma(period), memAll<Decimal>(period, true)),
+		flatMap((sma, inputs) => {
 			let sum = ZERO
-			for (let i = 0; i < period; i += 1) {
-				sum = sum.plus(
-					inputs
-						.get(index - i)
-						.minus(sma)
-						.abs(),
-				)
+			for (let i = 0; i < period; i++) {
+				sum = sum.plus(inputs.get(i).minus(sma).abs())
 			}
 			return sum.div(period)
 		}),
 	)
 
-export const variance = (smoother: Smoother) =>
+export const custom_variance = (smoother: Smoother) =>
 	pipe(
 		fork(
 			pipe(
@@ -316,28 +330,40 @@ export const variance = (smoother: Smoother) =>
 		flatMap((p2, p1) => p2.minus(p1)),
 	)
 
-export const stddev = (smoother: Smoother) =>
+export const custom_stddev = (smoother: Smoother) =>
 	pipe(
-		variance(smoother),
+		custom_variance(smoother),
 		map((n) => n.sqrt()),
 	)
 
-export const stderr = (period: number, smoother: Smoother) =>
-	pipe(stddev(smoother), divideBy(new Decimal(period).sqrt()))
+export const custom_stderr = (period: number, smoother: Smoother) =>
+	pipe(custom_stddev(smoother), divideBy(new Decimal(period).sqrt()))
 
-export const volatility = (duration: number, smoother: Smoother) =>
+export const custom_volatility = (duration: number, smoother: Smoother) =>
 	pipe(
 		mapWithLast((input: Decimal, last) => input.div(last).minus(1)),
-		stddev(smoother),
+		custom_stddev(smoother),
 		multiplyBy(new Decimal(duration).sqrt()),
 	)
 
-export const apo = (short: Smoother, long: Smoother) => minus(short, long)
+export const variance = (period: number) => custom_variance(sma(period))
+export const stddev = (period: number) => custom_stddev(sma(period))
+export const stderr = (period: number) => custom_stderr(period, sma(period))
+export const volatility = (period: number) =>
+	custom_volatility(252, sma(period))
 
-export const ppo = (short: Smoother, long: Smoother) =>
+export const custom_apo = (short: Smoother, long: Smoother) =>
+	minus(short, long)
+
+export const custom_ppo = (short: Smoother, long: Smoother) =>
 	oscillators.diff_over_long(short, long)
 
-export const macd = (
+export const apo = (short: number, long: number) =>
+	pipe(custom_apo(ema(short), ema(long)), skip(1))
+export const ppo = (short: number, long: number) =>
+	pipe(custom_ppo(ema(short), ema(long)), skip(1))
+
+export const custom_macd = (
 	short: Smoother,
 	long: Smoother,
 	signal: Smoother,
@@ -356,6 +382,16 @@ export const macd = (
 		),
 	)
 
+export const macd = (short: number, long: number, signal: number) => {
+	const isSpecial = short === 12 && long === 26
+	return custom_macd(
+		custom_ema(isSpecial ? 0.15 : factors.e(short)),
+		custom_ema(isSpecial ? 0.075 : factors.e(long)),
+		ema(signal),
+		long,
+	)
+}
+
 const gains = mapWithLast((input: Decimal, last) =>
 	input.gt(last) ? input.minus(last) : ZERO,
 )
@@ -363,17 +399,26 @@ const losses = mapWithLast((input: Decimal, last) =>
 	input.lt(last) ? last.minus(input) : ZERO,
 )
 
-export const cmo = (smoother: Smoother) =>
+export const custom_cmo = (smoother: Smoother) =>
 	oscillators.diff_over_sum(pipe(gains, smoother), pipe(losses, smoother))
 
-export const rsi = (smoother: Smoother) =>
+export const custom_rsi = (smoother: Smoother) =>
 	oscillators.short_over_sum(pipe(gains, smoother), pipe(losses, smoother))
 
-export const stochrsi = (period: number, smoother: Smoother) =>
-	pipe(rsi(smoother), stoch(identity(), max(period), min(period)))
+export const custom_stochrsi = (period: number, smoother: Smoother) =>
+	pipe(custom_rsi(smoother), stoch(identity(), max(period), min(period)))
 
-export const dpo = (period: number, smoother: Smoother) =>
+export const rsi = (period: number) => custom_rsi(wilders(period))
+
+export const stochrsi = (period: number) =>
+	custom_stochrsi(period, wilders(period))
+
+export const cmo = (period: number) => custom_cmo(sum(period))
+
+export const custom_dpo = (period: number, smoother: Smoother) =>
 	minus(lag(Math.floor(period / 2) + 1, ZERO), smoother)
+
+export const dpo = (period: number) => custom_dpo(period, sma(period))
 
 export const mom = (period: number) =>
 	pipe(
@@ -408,7 +453,7 @@ export const vhf = (period: number) =>
 
 export const bbands = (period: number, scale: number) =>
 	pipe(
-		fork(sma(period), stddev(sma(period))),
+		fork(sma(period), custom_stddev(sma(period))),
 		flatMap(
 			(middle, stddev): [lower: Decimal, middle: Decimal, upper: Decimal] => {
 				const dev = stddev.times(scale)
@@ -417,7 +462,7 @@ export const bbands = (period: number, scale: number) =>
 		),
 	)
 
-export const vidya = (
+export const custom_vidya = (
 	short: Smoother,
 	long: Smoother,
 	factor: number,
@@ -426,7 +471,7 @@ export const vidya = (
 	pipe(
 		fastFork(
 			pipe(
-				fork(stddev(short), stddev(long)),
+				fork(custom_stddev(short), custom_stddev(long)),
 				flatMap((short, long) => short.div(long).times(factor)),
 			),
 			identity(),
@@ -438,6 +483,9 @@ export const vidya = (
 			ZERO,
 		),
 	)
+
+export const vidya = (short: number, long: number, factor: number) =>
+	custom_vidya(sma(short), sma(long), factor, long)
 
 export const linregslope = (period: number) => {
 	const x = (period * (period + 1)) / 2
@@ -468,14 +516,14 @@ export const fosc = (period: number) =>
 
 export const msw = (period: number) =>
 	pipe(
-		memAll<Decimal>(period),
-		skip(period),
-		map((inputs, i) => {
+		memAll<Decimal>(period, true),
+		skip(1),
+		map((inputs) => {
 			let rp = ZERO
 			let ip = ZERO
-			for (let j = 0; j < period; j += 1) {
-				const weight = inputs.get(period + i - j)
-				const a = new Decimal((2 * Math.PI * j) / period)
+			for (let i = 0; i < period; i++) {
+				const weight = inputs.get(i)
+				const a = new Decimal((2 * Math.PI * i) / period)
 				rp = rp.plus(a.cos().times(weight))
 				ip = ip.plus(a.sin().times(weight))
 			}

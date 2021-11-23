@@ -1,6 +1,49 @@
-import { IndicatorType, makeDescriptor } from './utils'
+export enum IndicatorType {
+	overlay = 'overlay',
+	indicator = 'indicator',
+}
 
-export default {
+export type IndicatorOption = {
+	name: string
+	step: number
+	min: number
+	max?: number
+}
+
+export type IndicatorOutput = {
+	name: string
+	range?: [number, number]
+}
+
+export type IndicatorDescriptor = {
+	key: string
+	name: string
+	type: IndicatorType
+	options: IndicatorOption[]
+	outputs: IndicatorOutput[]
+}
+
+export const makeDescriptor = (
+	key: string,
+	name: string,
+	type: IndicatorType,
+	options: (IndicatorOption | string)[],
+	outputs: (IndicatorOutput | string)[],
+): IndicatorDescriptor => ({
+	key,
+	name,
+	type,
+	options: options.map(
+		(option): IndicatorOption =>
+			typeof option === 'string' ? { name: option, min: 1, step: 1 } : option,
+	),
+	outputs: outputs.map(
+		(output): IndicatorOutput =>
+			typeof output === 'string' ? { name: output } : output,
+	),
+})
+
+export const descriptors = {
 	open: makeDescriptor(
 		'open',
 		'Open Price',
@@ -266,6 +309,13 @@ export default {
 		IndicatorType.indicator,
 		['period'],
 		['mass'],
+	),
+	md: makeDescriptor(
+		'md',
+		'Mean Deviation Over Period',
+		IndicatorType.indicator,
+		['period'],
+		['md'],
 	),
 	medprice: makeDescriptor(
 		'medprice',
