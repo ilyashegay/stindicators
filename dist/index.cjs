@@ -488,6 +488,10 @@ var avgprice = map((candle) => candle.open.plus(candle.high).plus(candle.low).pl
 var medprice = map((candle) => candle.high.plus(candle.low).div(2));
 var typprice = map((candle) => candle.high.plus(candle.low).plus(candle.close).div(3));
 var wcprice = map((candle) => candle.high.plus(candle.low).plus(candle.close).plus(candle.close).div(4));
+var ha_close = avgprice;
+var ha_open = pipe(ha_close, scan((open, close, index2) => index2 === 0 ? close : open.plus(close).div(2), ZERO));
+var ha_high = pipe(fork(highprice, ha_open, ha_close), flatMap((high, open, close) => import_decimal2.default.max(high, open, close)));
+var ha_low = pipe(fork(lowprice, ha_open, ha_close), flatMap((low, open, close) => import_decimal2.default.min(low, open, close)));
 var ad = scan((ad2, candle) => {
   const hl = candle.high.minus(candle.low);
   if (hl.eq(0))
@@ -511,6 +515,7 @@ var adx = (period) => {
   const smoother = custom_dm_smoother2(period);
   return custom_adx(smoother, pipe(smoother, map((val) => val.div(period))));
 };
+var adx_slope = (adx_period, slope_period) => pipe(adx(adx_period), forkWithLag(slope_period), flatMap((adx2, prev) => adx2.minus(prev).div(slope_period)));
 var custom_adxr = (dm_smoother, dx_smoother, period) => pipe(custom_adx(dm_smoother, dx_smoother), forkWithLag(period - 1), flatMap((head, tail) => head.plus(tail).div(2)));
 var adxr = (period) => {
   const smoother = custom_dm_smoother2(period);
@@ -678,6 +683,7 @@ var indicators = {
   ad: () => ad,
   adosc,
   adx,
+  adx_slope,
   adxr,
   ao: () => ao,
   apo: mp(apo),
@@ -699,6 +705,10 @@ var indicators = {
   emv: () => emv,
   fisher,
   fosc: mp(fosc),
+  ha_open: () => ha_open,
+  ha_high: () => ha_high,
+  ha_low: () => ha_low,
+  ha_close: () => ha_close,
   hma: mp(hma),
   kama: mp(kama),
   kvo,
@@ -812,6 +822,7 @@ var descriptors = {
   ad: makeDescriptor("ad", "Accumulation/Distribution Line", IndicatorType.indicator, [], ["ad"]),
   adosc: makeDescriptor("adosc", "Accumulation/Distribution Oscillator", IndicatorType.indicator, ["short period", "long period"], ["adosc"]),
   adx: makeDescriptor("adx", "Average Directional Movement Index", IndicatorType.indicator, ["period"], ["dx"]),
+  adx_slope: makeDescriptor("adx_slope", "Average Directional Movement Index Slope", IndicatorType.indicator, ["adx period", "slope period"], ["adx_slope"]),
   adxr: makeDescriptor("adxr", "Average Directional Movement Rating", IndicatorType.indicator, ["period"], ["dx"]),
   ao: makeDescriptor("ao", "Awesome Oscillator", IndicatorType.indicator, [], ["ao"]),
   apo: makeDescriptor("apo", "Absolute Price Oscillator", IndicatorType.indicator, ["short period", "long period"], ["apo"]),
@@ -839,6 +850,10 @@ var descriptors = {
   emv: makeDescriptor("emv", "Ease of Movement", IndicatorType.indicator, [], ["emv"]),
   fisher: makeDescriptor("fisher", "Fisher Transform", IndicatorType.indicator, ["period"], ["fisher", "fisher_signal"]),
   fosc: makeDescriptor("fosc", "Forecast Oscillator", IndicatorType.indicator, ["period"], [{ name: "fosc", range: [-100, 100] }]),
+  ha_open: makeDescriptor("ha_open", "Heikin Ashi Open", IndicatorType.overlay, [], ["ha_open"]),
+  ha_high: makeDescriptor("ha_high", "Heikin Ashi High", IndicatorType.overlay, [], ["ha_high"]),
+  ha_low: makeDescriptor("ha_low", "Heikin Ashi Low", IndicatorType.overlay, [], ["ha_low"]),
+  ha_close: makeDescriptor("ha_close", "Heikin Ashi Close", IndicatorType.overlay, [], ["ha_close"]),
   hma: makeDescriptor("hma", "Hull Moving Average", IndicatorType.overlay, ["period"], ["hma"]),
   kama: makeDescriptor("kama", "Kaufman Adaptive Moving Average", IndicatorType.overlay, ["period"], ["kama"]),
   kvo: makeDescriptor("kvo", "Klinger Volume Oscillator", IndicatorType.indicator, ["short period", "long period"], ["kvo"]),

@@ -209,6 +209,7 @@ export declare function initIndicators<T>(mapper: (input: T) => Candle): {
 	ad: () => Stream<T, Decimal>
 	adosc: (shortPeriod: number, longPeriod: number) => Stream<T, Decimal>
 	adx: (period: number) => Stream<T, Decimal>
+	adx_slope: (adx_period: number, slope_period: number) => Stream<T, Decimal>
 	adxr: (period: number) => Stream<T, Decimal>
 	ao: () => Stream<T, Decimal>
 	apo: (short: number, long: number) => Stream<T, Decimal>
@@ -233,6 +234,10 @@ export declare function initIndicators<T>(mapper: (input: T) => Candle): {
 	emv: () => Stream<T, Decimal>
 	fisher: (period: number) => Stream<T, [Decimal, Decimal]>
 	fosc: (period: number) => Stream<T, Decimal>
+	ha_open: () => Stream<T, Decimal>
+	ha_high: () => Stream<T, Decimal>
+	ha_low: () => Stream<T, Decimal>
+	ha_close: () => Stream<T, Decimal>
 	hma: (period: number) => Stream<T, Decimal>
 	kama: (period: number) => Stream<T, Decimal>
 	kvo: (short: number, long: number) => Stream<T, Decimal>
@@ -300,6 +305,10 @@ export declare const indicators: {
 	ad: () => Stream<Candle, Decimal>
 	adosc: (shortPeriod: number, longPeriod: number) => Stream<Candle, Decimal>
 	adx: (period: number) => Stream<Candle, Decimal>
+	adx_slope: (
+		adx_period: number,
+		slope_period: number,
+	) => Stream<Candle, Decimal>
 	adxr: (period: number) => Stream<Candle, Decimal>
 	ao: () => Stream<Candle, Decimal>
 	apo: (short: number, long: number) => Stream<Candle, Decimal>
@@ -324,6 +333,10 @@ export declare const indicators: {
 	emv: () => Stream<Candle, Decimal>
 	fisher: (period: number) => Stream<Candle, [Decimal, Decimal]>
 	fosc: (period: number) => Stream<Candle, Decimal>
+	ha_open: () => Stream<Candle, Decimal>
+	ha_high: () => Stream<Candle, Decimal>
+	ha_low: () => Stream<Candle, Decimal>
+	ha_close: () => Stream<Candle, Decimal>
 	hma: (period: number) => Stream<Candle, Decimal>
 	kama: (period: number) => Stream<Candle, Decimal>
 	kvo: (short: number, long: number) => Stream<Candle, Decimal>
@@ -478,6 +491,7 @@ export declare const descriptors: {
 	ad: IndicatorDescriptor
 	adosc: IndicatorDescriptor
 	adx: IndicatorDescriptor
+	adx_slope: IndicatorDescriptor
 	adxr: IndicatorDescriptor
 	ao: IndicatorDescriptor
 	apo: IndicatorDescriptor
@@ -499,6 +513,10 @@ export declare const descriptors: {
 	emv: IndicatorDescriptor
 	fisher: IndicatorDescriptor
 	fosc: IndicatorDescriptor
+	ha_open: IndicatorDescriptor
+	ha_high: IndicatorDescriptor
+	ha_low: IndicatorDescriptor
+	ha_close: IndicatorDescriptor
 	hma: IndicatorDescriptor
 	kama: IndicatorDescriptor
 	kvo: IndicatorDescriptor
