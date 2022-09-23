@@ -47,6 +47,23 @@ export const wcprice = map((candle: Candle) =>
 	candle.high.plus(candle.low).plus(candle.close).plus(candle.close).div(4),
 )
 
+export const ha_close = avgprice
+export const ha_open = pipe(
+	ha_close,
+	scan(
+		(open, close, index) => (index === 0 ? close : open.plus(close).div(2)),
+		ZERO,
+	),
+)
+export const ha_high = pipe(
+	fork(highprice, ha_open, ha_close),
+	flatMap((high, open, close) => Decimal.max(high, open, close)),
+)
+export const ha_low = pipe(
+	fork(lowprice, ha_open, ha_close),
+	flatMap((low, open, close) => Decimal.min(low, open, close)),
+)
+
 export const ad = scan((ad: Decimal, candle: Candle) => {
 	const hl = candle.high.minus(candle.low)
 	if (hl.eq(0)) return ad
@@ -104,6 +121,13 @@ export const adx = (period: number) => {
 		),
 	)
 }
+
+export const adx_slope = (adx_period: number, slope_period: number) =>
+	pipe(
+		adx(adx_period),
+		forkWithLag(slope_period),
+		flatMap((adx, prev) => adx.minus(prev).div(slope_period)),
+	)
 
 export const custom_adxr = (
 	dm_smoother: Smoother,

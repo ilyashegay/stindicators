@@ -94,6 +94,13 @@ export const descriptors = {
 		['period'],
 		['dx'],
 	),
+	adx_slope: makeDescriptor(
+		'adx_slope',
+		'Average Directional Movement Index Slope',
+		IndicatorType.indicator,
+		['adx period', 'slope period'],
+		['adx_slope'],
+	),
 	adxr: makeDescriptor(
 		'adxr',
 		'Average Directional Movement Rating',
@@ -246,6 +253,34 @@ export const descriptors = {
 		IndicatorType.indicator,
 		['period'],
 		[{ name: 'fosc', range: [-100, 100] }],
+	),
+	ha_open: makeDescriptor(
+		'ha_open',
+		'Heikin Ashi Open',
+		IndicatorType.overlay,
+		[],
+		['ha_open'],
+	),
+	ha_high: makeDescriptor(
+		'ha_high',
+		'Heikin Ashi High',
+		IndicatorType.overlay,
+		[],
+		['ha_high'],
+	),
+	ha_low: makeDescriptor(
+		'ha_low',
+		'Heikin Ashi Low',
+		IndicatorType.overlay,
+		[],
+		['ha_low'],
+	),
+	ha_close: makeDescriptor(
+		'ha_close',
+		'Heikin Ashi Close',
+		IndicatorType.overlay,
+		[],
+		['ha_close'],
 	),
 	hma: makeDescriptor(
 		'hma',
