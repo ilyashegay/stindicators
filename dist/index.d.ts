@@ -454,112 +454,30 @@ export declare const operators: {
 	wma: (period: number) => Stream<Decimal, Decimal>
 	zlema: (period: number) => Stream<Decimal, Decimal>
 }
-export declare enum IndicatorType {
-	overlay = 'overlay',
-	indicator = 'indicator',
-}
 export declare type IndicatorOption = {
 	name: string
 	step: number
+	def: number
 	min: number
 	max?: number
 }
 export declare type IndicatorOutput = {
 	name: string
-	range?: [number, number]
+	min?: number
+	max?: number
 }
-export declare type IndicatorDescriptor = {
+export declare class IndicatorDescriptor {
 	key: string
 	name: string
-	type: IndicatorType
+	isOverlay: boolean
 	options: IndicatorOption[]
 	outputs: IndicatorOutput[]
+	constructor(
+		key: string,
+		name: string,
+		isOverlay: boolean,
+		options: IndicatorOption[],
+		outputs: IndicatorOutput[],
+	)
 }
-export declare const makeDescriptor: (
-	key: string,
-	name: string,
-	type: IndicatorType,
-	options: (IndicatorOption | string)[],
-	outputs: (IndicatorOutput | string)[],
-) => IndicatorDescriptor
-export declare const descriptors: {
-	open: IndicatorDescriptor
-	high: IndicatorDescriptor
-	low: IndicatorDescriptor
-	close: IndicatorDescriptor
-	volume: IndicatorDescriptor
-	ad: IndicatorDescriptor
-	adosc: IndicatorDescriptor
-	adx: IndicatorDescriptor
-	adx_slope: IndicatorDescriptor
-	adxr: IndicatorDescriptor
-	ao: IndicatorDescriptor
-	apo: IndicatorDescriptor
-	aroon: IndicatorDescriptor
-	aroonosc: IndicatorDescriptor
-	atr: IndicatorDescriptor
-	avgprice: IndicatorDescriptor
-	bbands: IndicatorDescriptor
-	bop: IndicatorDescriptor
-	cci: IndicatorDescriptor
-	cmo: IndicatorDescriptor
-	cvi: IndicatorDescriptor
-	dema: IndicatorDescriptor
-	di: IndicatorDescriptor
-	dm: IndicatorDescriptor
-	dpo: IndicatorDescriptor
-	dx: IndicatorDescriptor
-	ema: IndicatorDescriptor
-	emv: IndicatorDescriptor
-	fisher: IndicatorDescriptor
-	fosc: IndicatorDescriptor
-	ha_open: IndicatorDescriptor
-	ha_high: IndicatorDescriptor
-	ha_low: IndicatorDescriptor
-	ha_close: IndicatorDescriptor
-	hma: IndicatorDescriptor
-	kama: IndicatorDescriptor
-	kvo: IndicatorDescriptor
-	linreg: IndicatorDescriptor
-	linregintercept: IndicatorDescriptor
-	linregslope: IndicatorDescriptor
-	macd: IndicatorDescriptor
-	marketfi: IndicatorDescriptor
-	mass: IndicatorDescriptor
-	md: IndicatorDescriptor
-	medprice: IndicatorDescriptor
-	mfi: IndicatorDescriptor
-	mom: IndicatorDescriptor
-	msw: IndicatorDescriptor
-	natr: IndicatorDescriptor
-	nvi: IndicatorDescriptor
-	obv: IndicatorDescriptor
-	ppo: IndicatorDescriptor
-	psar: IndicatorDescriptor
-	pvi: IndicatorDescriptor
-	qstick: IndicatorDescriptor
-	roc: IndicatorDescriptor
-	rocr: IndicatorDescriptor
-	rsi: IndicatorDescriptor
-	sma: IndicatorDescriptor
-	stoch: IndicatorDescriptor
-	stochrsi: IndicatorDescriptor
-	tema: IndicatorDescriptor
-	tr: IndicatorDescriptor
-	trima: IndicatorDescriptor
-	trix: IndicatorDescriptor
-	tsf: IndicatorDescriptor
-	typprice: IndicatorDescriptor
-	ultosc: IndicatorDescriptor
-	vhf: IndicatorDescriptor
-	vidya: IndicatorDescriptor
-	volatility: IndicatorDescriptor
-	vosc: IndicatorDescriptor
-	vwma: IndicatorDescriptor
-	wad: IndicatorDescriptor
-	wcprice: IndicatorDescriptor
-	wilders: IndicatorDescriptor
-	willr: IndicatorDescriptor
-	wma: IndicatorDescriptor
-	zlema: IndicatorDescriptor
-}
+export declare const descriptors: Record<string, IndicatorDescriptor>
