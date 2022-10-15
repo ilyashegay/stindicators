@@ -1,617 +1,417 @@
-export enum IndicatorType {
-	overlay = 'overlay',
-	indicator = 'indicator',
-}
-
 export type IndicatorOption = {
 	name: string
 	step: number
+	def: number
 	min: number
 	max?: number
 }
 
 export type IndicatorOutput = {
 	name: string
-	range?: [number, number]
+	min?: number
+	max?: number
 }
 
-export type IndicatorDescriptor = {
-	key: string
-	name: string
-	type: IndicatorType
-	options: IndicatorOption[]
-	outputs: IndicatorOutput[]
+export class IndicatorDescriptor {
+	constructor(
+		public key: string,
+		public name: string,
+		public isOverlay: boolean,
+		public options: IndicatorOption[],
+		public outputs: IndicatorOutput[],
+	) {}
 }
 
-export const makeDescriptor = (
-	key: string,
-	name: string,
-	type: IndicatorType,
-	options: (IndicatorOption | string)[],
-	outputs: (IndicatorOutput | string)[],
-): IndicatorDescriptor => ({
-	key,
+export const descriptors: Record<string, IndicatorDescriptor> = {}
+
+const nat = (name: string, def: number): IndicatorOption => ({
 	name,
-	type,
-	options: options.map(
-		(option): IndicatorOption =>
-			typeof option === 'string' ? { name: option, min: 1, step: 1 } : option,
-	),
-	outputs: outputs.map(
-		(output): IndicatorOutput =>
-			typeof output === 'string' ? { name: output } : output,
-	),
+	min: 1,
+	step: 1,
+	def,
 })
 
-export const descriptors = {
-	open: makeDescriptor(
-		'open',
-		'Open Price',
-		IndicatorType.overlay,
-		[],
-		['open'],
-	),
-	high: makeDescriptor(
-		'high',
-		'High Price',
-		IndicatorType.overlay,
-		[],
-		['high'],
-	),
-	low: makeDescriptor('low', 'Low Price', IndicatorType.overlay, [], ['low']),
-	close: makeDescriptor(
-		'close',
-		'Close Price',
-		IndicatorType.overlay,
-		[],
-		['close'],
-	),
-	volume: makeDescriptor(
-		'volume',
-		'Volume',
-		IndicatorType.indicator,
-		[],
-		['volume'],
-	),
-	ad: makeDescriptor(
-		'ad',
-		'Accumulation/Distribution Line',
-		IndicatorType.indicator,
-		[],
-		['ad'],
-	),
-	adosc: makeDescriptor(
+const flt = (
+	name: string,
+	def: number,
+	min: number,
+	max?: number,
+): IndicatorOption => ({
+	name,
+	min,
+	max,
+	step: 0.1,
+	def,
+})
+
+const out: Record<string, (name: string) => IndicatorOutput> = {
+	any: (name) => ({ name }),
+	pval: (name) => ({ name, min: 0 }),
+	uosc: (name) => ({ name, min: -1, max: 1 }),
+	cosc: (name) => ({ name, min: -100, max: 100 }),
+	pct: (name) => ({ name, min: 0, max: 100 }),
+	npct: (name) => ({ name, min: -100, max: 0 }),
+}
+
+const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
+	['open', 'Open Price', true, [], [out.pval('open')]],
+	['high', 'High Price', true, [], [out.pval('high')]],
+	['low', 'Low Price', true, [], [out.pval('low')]],
+	['close', 'Close Price', true, [], [out.pval('close')]],
+	['volume', 'Volume', false, [], [out.pval('volume')]],
+	['ad', 'Accumulation/Distribution Line', false, [], [out.any('ad')]],
+	[
 		'adosc',
 		'Accumulation/Distribution Oscillator',
-		IndicatorType.indicator,
-		['short period', 'long period'],
-		['adosc'],
-	),
-	adx: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14)],
+		[out.any('adosc')],
+	],
+	[
 		'adx',
 		'Average Directional Movement Index',
-		IndicatorType.indicator,
-		['period'],
-		['dx'],
-	),
-	adx_slope: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('adx')],
+	],
+	[
 		'adx_slope',
 		'Average Directional Movement Index Slope',
-		IndicatorType.indicator,
-		['adx period', 'slope period'],
-		['adx_slope'],
-	),
-	adxr: makeDescriptor(
+		false,
+		[nat('adx period', 14), nat('slope period', 14)],
+		[out.any('adx_slope')],
+	],
+	[
 		'adxr',
 		'Average Directional Movement Rating',
-		IndicatorType.indicator,
-		['period'],
-		['dx'],
-	),
-	ao: makeDescriptor(
-		'ao',
-		'Awesome Oscillator',
-		IndicatorType.indicator,
-		[],
-		['ao'],
-	),
-	apo: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('adxr')],
+	],
+	['ao', 'Awesome Oscillator', false, [], [out.any('ao')]],
+	[
 		'apo',
 		'Absolute Price Oscillator',
-		IndicatorType.indicator,
-		['short period', 'long period'],
-		['apo'],
-	),
-	aroon: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14)],
+		[out.any('apo')],
+	],
+	[
 		'aroon',
 		'Aroon',
-		IndicatorType.indicator,
-		['period'],
-		[
-			{ name: 'aroon_down', range: [0, 100] },
-			{ name: 'aroon_up', range: [0, 100] },
-		],
-	),
-	aroonosc: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('aroon_down'), out.pct('aroon_up')],
+	],
+	[
 		'aroonosc',
 		'Aroon Oscillator',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'aroonosc', range: [-100, 100] }],
-	),
-	atr: makeDescriptor(
-		'atr',
-		'Average True Range',
-		IndicatorType.indicator,
-		['period'],
-		['atr'],
-	),
-	avgprice: makeDescriptor(
-		'avgprice',
-		'Average Price',
-		IndicatorType.overlay,
-		[],
-		['avgprice'],
-	),
-	bbands: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.nosc('aroonosc')],
+	],
+	['atr', 'Average True Range', false, [nat('period', 14)], [out.pval('atr')]],
+	['avgprice', 'Average Price', true, [], [out.pval('avgprice')]],
+	[
 		'bbands',
 		'Bollinger Bands',
-		IndicatorType.overlay,
-		['period', 'stddev'],
-		['bbands_lower', 'bbands_middle', 'bbands_upper'],
-	),
-	bop: makeDescriptor(
-		'bop',
-		'Balance of Power',
-		IndicatorType.indicator,
-		[],
-		['bop'],
-	),
-	cci: makeDescriptor(
+		true,
+		[nat('period', 20), nat('stddev', 2)],
+		[
+			out.pval('bbands_lower'),
+			out.pval('bbands_middle'),
+			out.pval('bbands_upper'),
+		],
+	],
+	['bop', 'Balance of Power', false, [], [out.uosc('bop')]],
+	[
 		'cci',
 		'Commodity Channel Index',
-		IndicatorType.indicator,
-		['period'],
-		['cci'],
-	),
-	cmo: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('cci')],
+	],
+	[
 		'cmo',
 		'Chande Momentum Oscillator',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'cmo', range: [-100, 100] }],
-	),
-	cvi: makeDescriptor(
-		'cvi',
-		'Chaikins Volatility',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'cvi', range: [-100, 100] }],
-	),
-	dema: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.nosc('cmo')],
+	],
+	['cvi', 'Chaikins Volatility', false, [nat('period', 14)], [out.nosc('cvi')]],
+	[
 		'dema',
 		'Double Exponential Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['dema'],
-	),
-	di: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('dema')],
+	],
+	[
 		'di',
 		'Directional Indicator',
-		IndicatorType.indicator,
-		['period'],
-		[
-			{ name: 'plus_di', range: [0, 100] },
-			{ name: 'minus_di', range: [0, 100] },
-		],
-	),
-	dm: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('plus_di'), out.pct('minus_di')],
+	],
+	[
 		'dm',
 		'Directional Movement',
-		IndicatorType.indicator,
-		['period'],
-		['plus_dm', 'minus_dm'],
-	),
-	dpo: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('plus_dm'), out.pct('minus_dm')],
+	],
+	[
 		'dpo',
 		'Detrended Price Oscillator',
-		IndicatorType.indicator,
-		['period'],
-		['dpo'],
-	),
-	dx: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('dpo')],
+	],
+	[
 		'dx',
 		'Directional Movement Index',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'dx', range: [0, 100] }],
-	),
-	ema: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('dx')],
+	],
+	[
 		'ema',
 		'Exponential Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['ema'],
-	),
-	emv: makeDescriptor(
-		'emv',
-		'Ease of Movement',
-		IndicatorType.indicator,
-		[],
-		['emv'],
-	),
-	fisher: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('ema')],
+	],
+	['emv', 'Ease of Movement', false, [], [out.uosc('emv')]],
+	[
 		'fisher',
 		'Fisher Transform',
-		IndicatorType.indicator,
-		['period'],
-		['fisher', 'fisher_signal'],
-	),
-	fosc: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('fisher'), out.any('fisher_signal')],
+	],
+	[
 		'fosc',
 		'Forecast Oscillator',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'fosc', range: [-100, 100] }],
-	),
-	ha_open: makeDescriptor(
-		'ha_open',
-		'Heikin Ashi Open',
-		IndicatorType.overlay,
-		[],
-		['ha_open'],
-	),
-	ha_high: makeDescriptor(
-		'ha_high',
-		'Heikin Ashi High',
-		IndicatorType.overlay,
-		[],
-		['ha_high'],
-	),
-	ha_low: makeDescriptor(
-		'ha_low',
-		'Heikin Ashi Low',
-		IndicatorType.overlay,
-		[],
-		['ha_low'],
-	),
-	ha_close: makeDescriptor(
-		'ha_close',
-		'Heikin Ashi Close',
-		IndicatorType.overlay,
-		[],
-		['ha_close'],
-	),
-	hma: makeDescriptor(
-		'hma',
-		'Hull Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['hma'],
-	),
-	kama: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.nosc('fosc')],
+	],
+	['ha_open', 'Heikin Ashi Open', true, [], [out.pval('ha_open')]],
+	['ha_high', 'Heikin Ashi High', true, [], [out.pval('ha_high')]],
+	['ha_low', 'Heikin Ashi Low', true, [], [out.pval('ha_low')]],
+	['ha_close', 'Heikin Ashi Close', true, [], [out.pval('ha_close')]],
+	['hma', 'Hull Moving Average', true, [nat('period', 14)], [out.pval('hma')]],
+	[
 		'kama',
 		'Kaufman Adaptive Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['kama'],
-	),
-	kvo: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('kama')],
+	],
+	[
 		'kvo',
 		'Klinger Volume Oscillator',
-		IndicatorType.indicator,
-		['short period', 'long period'],
-		['kvo'],
-	),
-	linreg: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14)],
+		[out.any('kvo')],
+	],
+	[
 		'linreg',
 		'Linear Regression',
-		IndicatorType.overlay,
-		['period'],
-		['linreg'],
-	),
-	linregintercept: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('linreg')],
+	],
+	[
 		'linregintercept',
 		'Linear Regression Intercept',
-		IndicatorType.indicator,
-		['period'],
-		['linregintercept'],
-	),
-	linregslope: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('linregintercept')],
+	],
+	[
 		'linregslope',
 		'Linear Regression Slope',
-		IndicatorType.indicator,
-		['period'],
-		['linregslope'],
-	),
-	macd: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('linregslope')],
+	],
+	[
 		'macd',
 		'Moving Average Convergence/Divergence',
-		IndicatorType.indicator,
-		['short period', 'long period', 'signal period'],
-		['macd', 'macd_signal', 'macd_histogram'],
-	),
-	marketfi: makeDescriptor(
-		'marketfi',
-		'Market Facilitation Index',
-		IndicatorType.indicator,
-		[],
-		['marketfi'],
-	),
-	mass: makeDescriptor(
-		'mass',
-		'Mass Index',
-		IndicatorType.indicator,
-		['period'],
-		['mass'],
-	),
-	md: makeDescriptor(
+		false,
+		[nat('short period', 12), nat('long period', 26), nat('signal period', 9)],
+		[out.any('macd'), out.any('macd_signal'), out.any('macd_histogram')],
+	],
+	['marketfi', 'Market Facilitation Index', false, [], [out.any('marketfi')]],
+	['mass', 'Mass Index', false, [nat('period', 14)], [out.any('mass')]],
+	[
 		'md',
 		'Mean Deviation Over Period',
-		IndicatorType.indicator,
-		['period'],
-		['md'],
-	),
-	medprice: makeDescriptor(
-		'medprice',
-		'Median Price',
-		IndicatorType.overlay,
-		[],
-		['medprice'],
-	),
-	mfi: makeDescriptor(
-		'mfi',
-		'Money Flow Index',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'mfi', range: [0, 100] }],
-	),
-	mom: makeDescriptor(
-		'mom',
-		'Momentum',
-		IndicatorType.indicator,
-		['period'],
-		['mom'],
-	),
-	msw: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('md')],
+	],
+	['medprice', 'Median Price', true, [], [out.pval('medprice')]],
+	['mfi', 'Money Flow Index', false, [nat('period', 14)], [out.pct('mfi')]],
+	['mom', 'Momentum', false, [nat('period', 14)], [out.any('mom')]],
+	[
 		'msw',
 		'Mesa Sine Wave',
-		IndicatorType.indicator,
-		['period'],
-		[
-			{ name: 'msw_sine', range: [-1, 1] },
-			{ name: 'msw_lead', range: [-1, 1] },
-		],
-	),
-	natr: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.uosc('msw_sine'), out.uosc('msw_lead')],
+	],
+	[
 		'natr',
 		'Normalized Average True Range',
-		IndicatorType.indicator,
-		['period'],
-		['natr'],
-	),
-	nvi: makeDescriptor(
-		'nvi',
-		'Negative Volume Index',
-		IndicatorType.indicator,
-		[],
-		['nvi'],
-	),
-	obv: makeDescriptor(
-		'obv',
-		'On Balance Volume',
-		IndicatorType.indicator,
-		[],
-		['obv'],
-	),
-	ppo: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('natr')],
+	],
+	['nvi', 'Negative Volume Index', false, [], [out.any('nvi')]],
+	['obv', 'On Balance Volume', false, [], [out.any('obv')]],
+	[
 		'ppo',
 		'Percentage Price Oscillator',
-		IndicatorType.indicator,
-		['short period', 'long period'],
-		['ppo'],
-	),
-	psar: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14)],
+		[out.nosc('ppo')],
+	],
+	[
 		'psar',
 		'Parabolic SAR',
-		IndicatorType.overlay,
+		true,
 		[
-			{
-				name: 'acceleration factor step',
-				step: 0.1,
-				min: 0,
-				max: 1,
-			},
-			'acceleration factor maximum',
+			flt('acceleration factor step', 0.2, 0, 1),
+			flt('acceleration factor maximum', 2, 0.1),
 		],
-		['psar'],
-	),
-	pvi: makeDescriptor(
-		'pvi',
-		'Positive Volume Index',
-		IndicatorType.indicator,
-		[],
-		['pvi'],
-	),
-	qstick: makeDescriptor(
-		'qstick',
-		'Qstick',
-		IndicatorType.indicator,
-		['period'],
-		['qstick'],
-	),
-	roc: makeDescriptor(
-		'roc',
-		'Rate of Change',
-		IndicatorType.indicator,
-		['period'],
-		['roc'],
-	),
-	rocr: makeDescriptor(
+		[out.pval('psar')],
+	],
+	['pvi', 'Positive Volume Index', false, [], [out.any('pvi')]],
+	['qstick', 'Qstick', false, [nat('period', 14)], [out.any('qstick')]],
+	['roc', 'Rate of Change', false, [nat('period', 14)], [out.any('roc')]],
+	[
 		'rocr',
 		'Rate of Change Ratio',
-		IndicatorType.indicator,
-		['period'],
-		['rocr'],
-	),
-	rsi: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('rocr')],
+	],
+	[
 		'rsi',
 		'Relative Strength Index',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'rsi', range: [0, 100] }],
-	),
-	sma: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('rsi')],
+	],
+	[
 		'sma',
 		'Simple Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['sma'],
-	),
-	stoch: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('sma')],
+	],
+	[
 		'stoch',
 		'Stochastic Oscillator',
-		IndicatorType.indicator,
-		['%k period', '%k slowing period', '%d period'],
-		[
-			{ name: 'stoch_k', range: [0, 100] },
-			{ name: 'stoch_d', range: [0, 100] },
-		],
-	),
-	stochrsi: makeDescriptor(
+		false,
+		[nat('%k period', 14), nat('%k slowing period', 3), nat('%d period', 1)],
+		[out.pct('stoch_k'), out.pct('stoch_d')],
+	],
+	[
 		'stochrsi',
 		'Stochastic RSI',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'stochrsi', range: [0, 100] }],
-	),
-	tema: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.pct('stochrsi')],
+	],
+	[
 		'tema',
 		'Triple Exponential Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['tema'],
-	),
-	tr: makeDescriptor('tr', 'True Range', IndicatorType.indicator, [], ['tr']),
-	trima: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('tema')],
+	],
+	['tr', 'True Range', false, [], [out.pval('tr')]],
+	[
 		'trima',
 		'Triangular Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['trima'],
-	),
-	trix: makeDescriptor(
-		'trix',
-		'Trix',
-		IndicatorType.indicator,
-		['period'],
-		['trix'],
-	),
-	tsf: makeDescriptor(
-		'tsf',
-		'Time Series Forecast',
-		IndicatorType.overlay,
-		['period'],
-		['tsf'],
-	),
-	typprice: makeDescriptor(
-		'typprice',
-		'Typical Price',
-		IndicatorType.overlay,
-		[],
-		['typprice'],
-	),
-	ultosc: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('trima')],
+	],
+	['trix', 'Trix', false, [nat('period', 14)], [out.nosc('trix')]],
+	['tsf', 'Time Series Forecast', true, [nat('period', 14)], [out.pval('tsf')]],
+	['typprice', 'Typical Price', true, [], [out.pval('typprice')]],
+	[
 		'ultosc',
 		'Ultimate Oscillator',
-		IndicatorType.indicator,
-		['short period', 'medium period', 'long period'],
-		[{ name: 'ultosc', range: [0, 100] }],
-	),
-	vhf: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('medium period', 14), nat('long period', 28)],
+		[out.pct('ultosc')],
+	],
+	[
 		'vhf',
 		'Vertical Horizontal Filter',
-		IndicatorType.indicator,
-		['period'],
-		['vhf'],
-	),
-	vidya: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('vhf')],
+	],
+	[
 		'vidya',
 		'Variable Index Dynamic Average',
-		IndicatorType.overlay,
-		[
-			'short period',
-			'long period',
-			{
-				name: 'alpha',
-				max: 1,
-				min: 0,
-				step: 0.1,
-			},
-		],
-		['vidya'],
-	),
-	volatility: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14), flt('alpha', 0.2, 0, 1)],
+		[out.any('vidya')],
+	],
+	[
 		'volatility',
 		'Annualized Historical Volatility',
-		IndicatorType.indicator,
-		['period'],
-		['volatility'],
-	),
-	vosc: makeDescriptor(
+		false,
+		[nat('period', 14)],
+		[out.any('volatility')],
+	],
+	[
 		'vosc',
 		'Volume Oscillator',
-		IndicatorType.indicator,
-		['short period', 'long period'],
-		['vosc'],
-	),
-	vwma: makeDescriptor(
+		false,
+		[nat('short period', 7), nat('long period', 14)],
+		[out.nosc('vosc')],
+	],
+	[
 		'vwma',
 		'Volume Weighted Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['vwma'],
-	),
-	wad: makeDescriptor(
-		'wad',
-		'Williams Accumulation/Distribution',
-		IndicatorType.indicator,
-		[],
-		['wad'],
-	),
-	wcprice: makeDescriptor(
-		'wcprice',
-		'Weighted Close Price',
-		IndicatorType.overlay,
-		[],
-		['wcprice'],
-	),
-	wilders: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('vwma')],
+	],
+	['wad', 'Williams Accumulation/Distribution', false, [], [out.any('wad')]],
+	['wcprice', 'Weighted Close Price', true, [], [out.pval('wcprice')]],
+	[
 		'wilders',
 		'Wilders Smoothing',
-		IndicatorType.overlay,
-		['period'],
-		['wilders'],
-	),
-	willr: makeDescriptor(
-		'willr',
-		'Williams %R',
-		IndicatorType.indicator,
-		['period'],
-		[{ name: 'willr', range: [-100, 0] }],
-	),
-	wma: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('wilders')],
+	],
+	['willr', 'Williams %R', false, [nat('period', 14)], [out.npct('willr')]],
+	[
 		'wma',
 		'Weighted Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['wma'],
-	),
-	zlema: makeDescriptor(
+		true,
+		[nat('period', 14)],
+		[out.pval('wma')],
+	],
+	[
 		'zlema',
 		'Zero-Lag Exponential Moving Average',
-		IndicatorType.overlay,
-		['period'],
-		['zlema'],
-	),
+		true,
+		[nat('period', 14)],
+		[out.pval('zlema')],
+	],
+]
+
+for (const args of data) {
+	descriptors[args[0]] = new IndicatorDescriptor(...args)
 }
