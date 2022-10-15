@@ -44,7 +44,10 @@ const flt = (
 	def,
 })
 
-const out: Record<string, (name: string) => IndicatorOutput> = {
+const out: Record<
+	'any' | 'pval' | 'uosc' | 'cosc' | 'pct' | 'npct',
+	(name: string) => IndicatorOutput
+> = {
 	any: (name) => ({ name }),
 	pval: (name) => ({ name, min: 0 }),
 	uosc: (name) => ({ name, min: -1, max: 1 }),
@@ -108,7 +111,7 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		'Aroon Oscillator',
 		false,
 		[nat('period', 14)],
-		[out.nosc('aroonosc')],
+		[out.cosc('aroonosc')],
 	],
 	['atr', 'Average True Range', false, [nat('period', 14)], [out.pval('atr')]],
 	['avgprice', 'Average Price', true, [], [out.pval('avgprice')]],
@@ -136,9 +139,9 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		'Chande Momentum Oscillator',
 		false,
 		[nat('period', 14)],
-		[out.nosc('cmo')],
+		[out.cosc('cmo')],
 	],
-	['cvi', 'Chaikins Volatility', false, [nat('period', 14)], [out.nosc('cvi')]],
+	['cvi', 'Chaikins Volatility', false, [nat('period', 14)], [out.cosc('cvi')]],
 	[
 		'dema',
 		'Double Exponential Moving Average',
@@ -194,7 +197,7 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		'Forecast Oscillator',
 		false,
 		[nat('period', 14)],
-		[out.nosc('fosc')],
+		[out.cosc('fosc')],
 	],
 	['ha_open', 'Heikin Ashi Open', true, [], [out.pval('ha_open')]],
 	['ha_high', 'Heikin Ashi High', true, [], [out.pval('ha_high')]],
@@ -276,7 +279,7 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		'Percentage Price Oscillator',
 		false,
 		[nat('short period', 7), nat('long period', 14)],
-		[out.nosc('ppo')],
+		[out.cosc('ppo')],
 	],
 	[
 		'psar',
@@ -341,7 +344,7 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		[nat('period', 14)],
 		[out.pval('trima')],
 	],
-	['trix', 'Trix', false, [nat('period', 14)], [out.nosc('trix')]],
+	['trix', 'Trix', false, [nat('period', 14)], [out.cosc('trix')]],
 	['tsf', 'Time Series Forecast', true, [nat('period', 14)], [out.pval('tsf')]],
 	['typprice', 'Typical Price', true, [], [out.pval('typprice')]],
 	[
@@ -377,7 +380,7 @@ const data: ConstructorParameters<typeof IndicatorDescriptor>[] = [
 		'Volume Oscillator',
 		false,
 		[nat('short period', 7), nat('long period', 14)],
-		[out.nosc('vosc')],
+		[out.cosc('vosc')],
 	],
 	[
 		'vwma',
