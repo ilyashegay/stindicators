@@ -1,21 +1,21 @@
-import Decimal from 'decimal.js'
+import { Decimal } from 'decimal.js'
 import {
-	Matcher,
-	pipe,
-	fork,
-	scan,
-	map,
-	skip,
-	identity,
-	memAll,
 	flatMap,
+	fork,
 	forkWithLag,
-	mapWithLast,
+	identity,
 	makeStatefulMap,
-} from './stream'
-import * as M from './math'
-import { Smoother, ZERO, ONE, HUNDRED } from './math'
-import { Candle } from './preset'
+	map,
+	mapWithLast,
+	Matcher,
+	memAll,
+	pipe,
+	scan,
+	skip,
+} from './stream.ts'
+import * as M from './math.ts'
+import { HUNDRED, ONE, Smoother, ZERO } from './math.ts'
+import { Candle } from './preset.ts'
 
 const MIN_VOLUME = new Decimal(0.00000001)
 

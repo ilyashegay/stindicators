@@ -1,21 +1,21 @@
-import Decimal from 'decimal.js'
+import { Decimal } from 'decimal.js'
 import {
-	Stream,
-	pipe,
+	fastFork,
+	flatMap,
 	fork,
-	skip,
+	forkWithLag,
+	identity,
 	lag,
 	map,
-	scan,
-	flatMap,
-	fastFork,
-	identity,
 	mapWithLast,
-	forkWithLag,
-	memAll,
-	matchItem,
 	matchDistance,
-} from './stream'
+	matchItem,
+	memAll,
+	pipe,
+	scan,
+	skip,
+	Stream,
+} from './stream.ts'
 
 export const ZERO = new Decimal(0)
 export const ONE = new Decimal(1)

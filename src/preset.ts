@@ -1,7 +1,7 @@
-import Decimal from 'decimal.js'
-import * as M from './math'
-import * as I from './indicators'
-import { Stream, lag, map } from './stream'
+import { Decimal } from 'decimal.js'
+import * as M from './math.ts'
+import * as I from './indicators.ts'
+import { lag, map, Stream } from './stream.ts'
 
 export type Candle = {
 	open: Decimal

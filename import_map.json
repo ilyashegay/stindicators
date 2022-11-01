@@ -1,0 +1,6 @@
+{
+	"imports": {
+		"asserts": "https://deno.land/std@0.161.0/testing/asserts.ts",
+		"decimal.js": "npm:decimal.js"
+	}
+}

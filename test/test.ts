@@ -1,8 +1,7 @@
-import Decimal from 'decimal.js'
-import { test } from 'uvu'
-import * as assert from 'uvu/assert'
-import * as I from '../src/index'
-import data from './data.json'
+import { assert, assertEquals } from 'asserts'
+import { Decimal } from 'decimal.js'
+import { Candle, IndicatorFn, indicators, operators } from '../src/preset.ts'
+import data from './data.json' assert { type: 'json' }
 
 type Test = {
 	id: string
@@ -15,15 +14,12 @@ type Test = {
 	outputs: (string | string[])[]
 }
 
-type TestIndicatorFn = I.IndicatorFn<
-	I.Candle | Decimal | Decimal[] | [Decimal, Decimal],
+type TestIndicatorFn = IndicatorFn<
+	Candle | Decimal | Decimal[] | [Decimal, Decimal],
 	number | Decimal | Decimal[]
 >
 
-const fns = { ...I.indicators, ...I.operators } as Record<
-	string,
-	TestIndicatorFn
->
+const fns = { ...indicators, ...operators } as Record<string, TestIndicatorFn>
 
 /**
  * Returns expected if received is within 0.1% of expected, returns received otherwise.
@@ -43,7 +39,7 @@ for (const t of data as Test[]) {
 	if (!fn) continue
 	remaining.delete(t.id)
 
-	test(`${t.id}(${t.args.join(', ')})`, () => {
+	Deno.test(`${t.id}(${t.args.join(', ')})`, () => {
 		const results: (number | Decimal | Decimal[])[] = []
 		const mapper = fn(...t.args).init()
 		for (const v of t.inputs) {
@@ -65,7 +61,7 @@ for (const t of data as Test[]) {
 			}
 		}
 
-		assert.is(
+		assertEquals(
 			results.length,
 			t.outputs.length,
 			`returns ${t.outputs.length} results`,
@@ -74,20 +70,18 @@ for (const t of data as Test[]) {
 		const rounded = results.map((r, i) => {
 			const o = t.outputs[i]
 			if (Array.isArray(r)) {
-				assert.ok(Array.isArray(o), 'output is array')
+				assert(Array.isArray(o), 'output is array')
 				return r.map((n, i) => round(n, o[i]))
 			} else {
-				assert.ok(!Array.isArray(o), 'output is not array')
+				assert(!Array.isArray(o), 'output is not array')
 				return round(r, o)
 			}
 		})
 
-		assert.equal(rounded, t.outputs, `returns correct results`)
+		assertEquals(rounded, t.outputs, `returns correct results`)
 	})
 }
 
-test('all indicators are tested', () => {
-	assert.equal(Array.from(remaining), [])
+Deno.test('all indicators are tested', () => {
+	assertEquals(Array.from(remaining), [])
 })
-
-test.run()
