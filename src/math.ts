@@ -1,4 +1,4 @@
-import { Decimal } from 'decimal.js'
+import { Decimal } from 'npm:decimal.js'
 import {
 	fastFork,
 	flatMap,
@@ -16,6 +16,8 @@ import {
 	skip,
 	Stream,
 } from './stream.ts'
+
+export { Decimal }
 
 export const ZERO = new Decimal(0)
 export const ONE = new Decimal(1)

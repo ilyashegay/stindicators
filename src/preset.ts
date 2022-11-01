@@ -1,4 +1,4 @@
-import { Decimal } from 'decimal.js'
+import { Decimal } from './math.ts'
 import * as M from './math.ts'
 import * as I from './indicators.ts'
 import { lag, map, Stream } from './stream.ts'

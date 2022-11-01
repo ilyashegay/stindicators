@@ -1,5 +1,8 @@
-import { assert, assertEquals } from 'asserts'
-import { Decimal } from 'decimal.js'
+import {
+	assert,
+	assertEquals,
+} from 'https://deno.land/std@0.161.0/testing/asserts.ts'
+import { Decimal } from '../src/math.ts'
 import { Candle, IndicatorFn, indicators, operators } from '../src/preset.ts'
 import data from './data.json' assert { type: 'json' }
 

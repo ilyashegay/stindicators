@@ -1,4 +1,3 @@
-import { Decimal } from 'decimal.js'
 import {
 	flatMap,
 	fork,
@@ -14,7 +13,7 @@ import {
 	skip,
 } from './stream.ts'
 import * as M from './math.ts'
-import { HUNDRED, ONE, Smoother, ZERO } from './math.ts'
+import { HUNDRED, Decimal, ONE, Smoother, ZERO } from './math.ts'
 import { Candle } from './preset.ts'
 
 const MIN_VOLUME = new Decimal(0.00000001)
