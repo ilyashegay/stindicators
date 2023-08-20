@@ -1,11 +1,11 @@
 // src/stream.ts
-var Stream = class {
+var Stream = class _Stream {
   constructor(fn, lb = 0) {
     this.fn = fn;
     this.lb = lb;
   }
   pipe(op) {
-    return new Stream((source) => op.fn(this.fn(source)), this.lb + op.lb);
+    return new _Stream((source) => op.fn(this.fn(source)), this.lb + op.lb);
   }
   init() {
     let n;
